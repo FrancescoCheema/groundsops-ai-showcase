@@ -7,12 +7,12 @@ GroundsOps AI is a production-oriented landscaping operations platform that turn
 > The staging deployment, monitoring and smoke-test workflows run on a self-hosted runner in the private
 > repository and are omitted here. The source is shared for evaluation only; see [LICENSE](LICENSE).
 
-## Demo video
+## Demo
 
-A 90-second walkthrough with a live AI generation: paint the area, calibrate the photo, generate the concept, then estimate, schedule and invoice.
+Paint the area to change, generate the concept, and only the selected ground changes. The calibrated area (214 sq ft) carries straight into the material estimate.
 
 <p align="center">
-  <a href="docs/assets/groundsops-demo.mp4"><img src="docs/assets/demo-thumbnail.jpg" alt="Watch the 90-second GroundsOps AI demo" width="100%"></a>
+  <img src="docs/assets/demo-preview.gif" alt="Painting a bare-soil strip, generating an AI concept, and the finished lawn with its measured area" width="720">
 </p>
 
 <p align="center">
