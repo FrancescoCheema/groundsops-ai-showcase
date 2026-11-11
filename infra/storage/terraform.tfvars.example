@@ -1,0 +1,8 @@
+project_name = "groundsops"
+environment  = "staging"
+
+allowed_origins = [
+  "https://staging.example.com",
+]
+
+force_destroy = false

@@ -1,0 +1,8 @@
+[Unit]
+Description=GroundsOps encrypted PostgreSQL backup
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/groundsops/app/scripts/backup-staging-db.sh

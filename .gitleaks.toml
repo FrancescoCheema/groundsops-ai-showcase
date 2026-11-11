@@ -1,0 +1,13 @@
+title = "GroundsOps full-history secret policy"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known non-secret examples"
+regexes = [
+  '''replace-with-[a-z0-9-]+''',
+  '''never-commit-this-value''',
+  '''example\.com'''
+]
+

@@ -1,0 +1,13 @@
+services:
+  api:
+    environment:
+      AUTH_MODE: development
+      DEMO_WORKSPACE_ENABLED: "true"
+      INFERENCE_PROVIDER: mock
+
+  web:
+    build:
+      args:
+        NEXT_PUBLIC_AUTH_MODE: development
+        NEXT_PUBLIC_DEMO_ORGANIZATION_ID: 00000000-0000-4000-8000-000000000001
+        NEXT_PUBLIC_DEMO_EMAIL: demo@groundsops.ai

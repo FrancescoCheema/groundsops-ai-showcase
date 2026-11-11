@@ -1,0 +1,17 @@
+{
+  "name": "GroundsOps Workspace",
+  "short_name": "GroundsOps",
+  "description": "Landscape operations workspace",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f6f1",
+  "theme_color": "#101512",
+  "icons": [
+    {
+      "src": "/icons/groundsops.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

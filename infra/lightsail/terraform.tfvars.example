@@ -1,0 +1,7 @@
+aws_region        = "ca-central-1"
+availability_zone = "ca-central-1a"
+environment       = "staging"
+bundle_id         = "small_3_0"
+ssh_allowed_cidrs = ["203.0.113.10/32"]
+billing_email     = "your-email@example.com"
+monthly_budget_usd = 35

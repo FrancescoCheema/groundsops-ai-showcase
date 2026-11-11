@@ -1,0 +1,9 @@
+[Unit]
+Description=GroundsOps staging resource and readiness monitor
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/opt/groundsops/app/.env.staging
+ExecStart=/opt/groundsops/app/scripts/monitor-staging.sh

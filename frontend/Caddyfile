@@ -1,0 +1,22 @@
+{$APP_DOMAIN} {
+    encode zstd gzip
+
+    @backend path /api/* /health /ready
+    handle @backend {
+        reverse_proxy api:8000
+    }
+
+    handle {
+        root * /srv
+        try_files {path} {path}/ /index.html
+        file_server
+    }
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+        Permissions-Policy "camera=(self), geolocation=(self)"
+        -Server
+    }
+}

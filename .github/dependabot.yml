@@ -1,0 +1,47 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule: { interval: daily }
+    open-pull-requests-limit: 5
+    rebase-strategy: auto
+    groups:
+      python-patches:
+        update-types: [patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
+    labels: [dependencies, security]
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule: { interval: daily }
+    open-pull-requests-limit: 5
+    rebase-strategy: auto
+    groups:
+      npm-patches:
+        update-types: [patch]
+      npm-minor:
+        update-types: [minor]
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
+    labels: [dependencies, security]
+  - package-ecosystem: docker
+    directory: /
+    schedule: { interval: weekly }
+    rebase-strategy: auto
+    labels: [dependencies, container]
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    rebase-strategy: auto
+    groups:
+      actions:
+        patterns: ["*"]
+    labels: [dependencies, ci]
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
