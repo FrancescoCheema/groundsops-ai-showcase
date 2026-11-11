@@ -47,7 +47,7 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
 
   container:
-    if: github.event_name != 'pull_request'
+    # Scan pull requests too, so a vulnerable base image is caught before it merges.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7

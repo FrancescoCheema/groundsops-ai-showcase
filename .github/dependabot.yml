@@ -34,6 +34,9 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: [version-update:semver-major]
+      # A Python runtime upgrade (3.12 -> 3.13+) is a deliberate change, not an auto-merge.
+      - dependency-name: "python"
+        update-types: [version-update:semver-minor]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
