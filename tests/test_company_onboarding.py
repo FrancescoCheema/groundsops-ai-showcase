@@ -1,4 +1,5 @@
 import jwt
+import pytest
 
 from groundsops.config import get_settings
 
@@ -12,7 +13,23 @@ def signup_headers(client, email: str, display_name: str = "New User") -> dict[s
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
-def test_verified_identity_can_register_company(client):
+@pytest.fixture
+def open_signup(monkeypatch):
+    monkeypatch.setattr(get_settings(), "self_service_signup_enabled", True)
+
+
+def test_self_service_signup_is_disabled_by_default(client):
+    response = client.post(
+        "/api/v1/onboarding/register",
+        headers=signup_headers(client, "walk-in@example.com"),
+        json={"organization_name": "Walk-in Company"},
+    )
+
+    assert response.status_code == 403
+    assert "invitation" in response.json()["detail"]
+
+
+def test_verified_identity_can_register_company(client, open_signup):
     email = "owner@example.com"
     response = client.post(
         "/api/v1/onboarding/register",
@@ -33,7 +50,7 @@ def test_verified_identity_can_register_company(client):
     assert token.status_code == 200
 
 
-def test_identity_cannot_register_twice(client):
+def test_identity_cannot_register_twice(client, open_signup):
     headers = signup_headers(client, "duplicate@example.com")
     first = client.post(
         "/api/v1/onboarding/register",
@@ -224,3 +241,50 @@ def test_platform_admin_can_soft_delete_cross_company_user(client, create_identi
     users = client.get("/api/v1/platform/users", headers=headers)
     assert users.status_code == 200
     assert user_id not in {user["id"] for user in users.json()}
+
+
+def test_platform_admin_creates_workspace_and_owner_joins_by_invitation(client, create_identity):
+    _, admin_headers = create_identity("Platform Operator Company")
+    created = client.post(
+        "/api/v1/platform/organizations",
+        headers=platform_headers(admin_headers),
+        json={"organization_name": "Cedar Landscaping", "admin_email": "Owner@Cedar.example"},
+    )
+    assert created.status_code == 201
+    body = created.json()
+    assert body["organization"]["name"] == "Cedar Landscaping"
+    assert body["invitation"]["email"] == "owner@cedar.example"
+    assert body["invitation"]["role"] == "admin"
+
+    accepted = client.post(
+        "/api/v1/invitations/accept",
+        headers=signup_headers(client, "owner@cedar.example", "Cedar Owner"),
+        json={"token": body["invitation"]["acceptance_token"]},
+    )
+    assert accepted.status_code == 201
+    assert accepted.json()["organization_id"] == body["organization"]["id"]
+    assert accepted.json()["role"] == "admin"
+
+
+def test_company_admin_cannot_create_workspaces(client, create_identity):
+    _, admin_headers = create_identity("Ordinary Company")
+
+    response = client.post(
+        "/api/v1/platform/organizations",
+        headers=admin_headers,
+        json={"organization_name": "Sneaky Company", "admin_email": "x@sneaky.example"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_platform_workspace_rejects_email_already_in_a_workspace(client, create_identity):
+    _, admin_headers = create_identity("Taken Email Company")
+
+    response = client.post(
+        "/api/v1/platform/organizations",
+        headers=platform_headers(admin_headers),
+        json={"organization_name": "Duplicate", "admin_email": "taken-email-company@example.com"},
+    )
+
+    assert response.status_code == 409

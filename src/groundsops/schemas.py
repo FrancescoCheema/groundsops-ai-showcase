@@ -193,6 +193,12 @@ class OrganizationRegistrationCreate(BaseModel):
     display_name: str | None = Field(default=None, min_length=2, max_length=200)
 
 
+class PlatformWorkspaceCreate(BaseModel):
+    organization_name: str = Field(min_length=2, max_length=200)
+    admin_email: str = Field(min_length=3, max_length=320, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    expires_in_days: int = Field(default=14, ge=1, le=30)
+
+
 class OrganizationRegistrationRead(BaseModel):
     organization: OrganizationRead
     user: OrganizationUserRead
@@ -218,6 +224,11 @@ class InvitationRead(BaseModel):
 
 class InvitationCreated(InvitationRead):
     acceptance_token: str
+
+
+class PlatformWorkspaceCreated(BaseModel):
+    organization: OrganizationRead
+    invitation: InvitationCreated
 
 
 class InvitationAccept(BaseModel):

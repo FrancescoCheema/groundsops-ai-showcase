@@ -111,6 +111,8 @@ from groundsops.schemas import (
     OrganizationUserRead,
     PlatformOrganizationRead,
     PlatformUserRead,
+    PlatformWorkspaceCreate,
+    PlatformWorkspaceCreated,
     PropertyCreate,
     PropertyRead,
     PropertyUpdate,
@@ -1031,6 +1033,11 @@ def register_organization(
     identity: SignupIdentity,
     db: DbSession,
 ) -> dict:
+    if not get_settings().self_service_signup_enabled:
+        raise HTTPException(
+            status_code=403,
+            detail="New workspaces are set up by invitation. Contact GroundsOps to get started.",
+        )
     existing = db.scalar(
         select(OrganizationUser).where(
             or_(
@@ -1402,6 +1409,41 @@ def list_platform_organizations(
             }
         )
     return result
+
+
+@router.post(
+    "/platform/organizations",
+    response_model=PlatformWorkspaceCreated,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_platform_workspace(
+    payload: PlatformWorkspaceCreate,
+    principal: PlatformPrincipal,
+    db: DbSession,
+) -> dict:
+    """Create a company workspace and invite its first administrator."""
+    email = payload.admin_email.lower().strip()
+    if db.scalar(select(OrganizationUser).where(OrganizationUser.email == email)) is not None:
+        raise HTTPException(status_code=409, detail="That email already belongs to a workspace")
+    organization = Organization(name=payload.organization_name.strip())
+    db.add(organization)
+    db.flush()
+    token = secrets.token_urlsafe(32)
+    invitation = OrganizationInvitation(
+        organization_id=organization.id,
+        invited_by_user_id=principal.user_id,
+        email=email,
+        role=OrganizationRole.ADMIN.value,
+        token_hash=hashlib.sha256(token.encode()).hexdigest(),
+        expires_at=datetime.now(UTC) + timedelta(days=payload.expires_in_days),
+    )
+    db.add(invitation)
+    db.commit()
+    db.refresh(organization)
+    db.refresh(invitation)
+    created = InvitationRead.model_validate(invitation).model_dump()
+    created["acceptance_token"] = token
+    return {"organization": organization, "invitation": created}
 
 
 @router.get("/platform/users", response_model=list[PlatformUserRead])

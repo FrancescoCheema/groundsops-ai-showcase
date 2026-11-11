@@ -538,6 +538,11 @@ export default function Home() {
     );
   }, [selectedDesign, view]);
 
+  // New company workspaces are created by GroundsOps (platform admins) and joined by invitation,
+  // unless self-service sign-up is explicitly enabled for this deployment.
+  const selfServiceSignup = process.env.NEXT_PUBLIC_SELF_SERVICE_SIGNUP === "true";
+  const workspaceSetupBlocked = authScreen === "workspace" && !selfServiceSignup;
+
   if (!token) {
     return (
       <main className="login-shell">
@@ -549,34 +554,26 @@ export default function Home() {
               </div>
               <span>GroundsOps <b>AI</b></span>
             </div>
-            <h1>Show clients their new yard <em>before</em> you leave the driveway.</h1>
+            <h1>Landscape design and job management, <em>in one place</em>.</h1>
             <p className="login-copy">
-              Photograph the site, paint the area to change, and turn an AI concept into a measured
-              estimate, quote, crew schedule and invoice — in one field-ready workspace.
+              Upload a site photo, mark the area to change and review an AI design concept. Then
+              build the estimate, quote, schedule and invoice from the same project.
             </p>
             <ul className="login-highlights">
-              <li><Sparkles /> AI concepts that only change what you select</li>
-              <li><Ruler /> Calibrated areas become material estimates</li>
-              <li><ShieldCheck /> Private by default, hosted in Canada</li>
+              <li><Sparkles /> AI edits stay inside the area you select</li>
+              <li><Ruler /> Material estimates from calibrated photo measurements</li>
+              <li><ShieldCheck /> Company data kept private, stored in Canada</li>
             </ul>
           </div>
           <div className="login-showcase" aria-hidden="true">
             <figure className="showcase-card before">
               <img src="/showcase/before.webp" alt="" width={683} height={513} />
-              <figcaption>Site photo</figcaption>
+              <figcaption>Before</figcaption>
             </figure>
             <figure className="showcase-card after">
               <img src="/showcase/after.webp" alt="" width={682} height={510} />
               <figcaption><Sparkles /> AI concept</figcaption>
             </figure>
-            <div className="showcase-chip quote">
-              <small>Quote ready</small>
-              <strong>$4,860.00</strong>
-            </div>
-            <div className="showcase-chip area">
-              <Ruler />
-              <span><strong>412 ft²</strong><small>sod · 4.1 yd³ soil</small></span>
-            </div>
           </div>
         </section>
         <section className="login-panel">
@@ -585,9 +582,11 @@ export default function Home() {
             onSubmit={
               authScreen === "register"
                 ? createAccount
-                : authScreen === "workspace"
-                  ? createWorkspaceForExistingAccount
-                  : signIn
+                : workspaceSetupBlocked
+                  ? (event: FormEvent) => event.preventDefault()
+                  : authScreen === "workspace"
+                    ? createWorkspaceForExistingAccount
+                    : signIn
             }
           >
             <div>
@@ -599,7 +598,9 @@ export default function Home() {
                     : "GroundsOps Workspace"}
               </p>
               <h2>
-                {authScreen === "workspace"
+                {workspaceSetupBlocked
+                  ? "No workspace yet"
+                  : authScreen === "workspace"
                   ? "Set up your company"
                   : authScreen === "register"
                     ? inviteToken
@@ -610,7 +611,9 @@ export default function Home() {
                       : "Sign in to continue"}
               </h2>
               <p>
-                {authScreen === "workspace"
+                {workspaceSetupBlocked
+                  ? "This account isn't linked to a company workspace. Ask your company admin for an invitation link, or contact GroundsOps to set up a workspace."
+                  : authScreen === "workspace"
                   ? "Add the business details your team will see across GroundsOps."
                   : inviteToken
                   ? "Use the exact email address that received this invitation."
@@ -619,7 +622,7 @@ export default function Home() {
                     : "Access your company workspace securely."}
               </p>
             </div>
-            {(authScreen === "workspace" ||
+            {((authScreen === "workspace" && !workspaceSetupBlocked) ||
               (authScreen === "register" && !awaitingConfirmation && !inviteToken)) && (
               <label>
                 Company name
@@ -627,7 +630,7 @@ export default function Home() {
               </label>
             )}
             {((authScreen === "register" && !awaitingConfirmation) ||
-              authScreen === "workspace") && (
+              (authScreen === "workspace" && !workspaceSetupBlocked)) && (
               <label>
                 Your name
                 <input required value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="Francesco Cheema" />
@@ -693,7 +696,7 @@ export default function Home() {
                   Explore the live demo
                 </button>
               )}
-            <button className="primary" disabled={busy}>
+            {!workspaceSetupBlocked && <button className="primary" disabled={busy}>
               {busy
                 ? "Working..."
                 : authScreen === "workspace"
@@ -706,9 +709,10 @@ export default function Home() {
                   ? "Verify code"
                   : "Open workspace"}
               <ChevronRight aria-hidden="true" />
-            </button>
+            </button>}
             {process.env.NEXT_PUBLIC_AUTH_MODE === "cognito" &&
-              authScreen !== "workspace" && (
+              authScreen !== "workspace" &&
+              (selfServiceSignup || inviteToken || authScreen === "register") && (
               <button
                 className="auth-switch"
                 type="button"
@@ -1209,6 +1213,11 @@ function PlatformAdministration({
   const [accountState, setAccountState] = useState("all");
   const [status, setStatus] = useState("");
   const [busyUserId, setBusyUserId] = useState("");
+  const [newCompanyName, setNewCompanyName] = useState("");
+  const [newOwnerEmail, setNewOwnerEmail] = useState("");
+  const [creatingWorkspace, setCreatingWorkspace] = useState(false);
+  const [workspaceLink, setWorkspaceLink] = useState("");
+  const [createStatus, setCreateStatus] = useState("");
   const visibleUsers = users.filter(
     (user) =>
       (organizationId === "all" || user.organization_id === organizationId) &&
@@ -1235,6 +1244,38 @@ function PlatformAdministration({
       setStatus(error instanceof Error ? error.message : "Account update failed.");
     } finally {
       setBusyUserId("");
+    }
+  }
+
+  async function createWorkspace(event: FormEvent) {
+    event.preventDefault();
+    setCreatingWorkspace(true);
+    setCreateStatus("");
+    setWorkspaceLink("");
+    try {
+      const created = await request<{ organization: { name: string }; invitation: { acceptance_token: string; email: string } }>(
+        "/api/v1/platform/organizations",
+        token,
+        {
+          method: "POST",
+          body: JSON.stringify({ organization_name: newCompanyName.trim(), admin_email: newOwnerEmail.trim() }),
+        },
+      );
+      const link = `${window.location.origin}${window.location.pathname}?invite=${created.invitation.acceptance_token}`;
+      setWorkspaceLink(link);
+      try {
+        await navigator.clipboard?.writeText(link);
+        setCreateStatus(`${created.organization.name} created. Invitation link for ${created.invitation.email} copied.`);
+      } catch {
+        setCreateStatus(`${created.organization.name} created. Copy the invitation link below.`);
+      }
+      setNewCompanyName("");
+      setNewOwnerEmail("");
+      await refresh();
+    } catch (error) {
+      setCreateStatus(error instanceof Error ? error.message : "Workspace could not be created.");
+    } finally {
+      setCreatingWorkspace(false);
     }
   }
 
@@ -1276,6 +1317,35 @@ function PlatformAdministration({
           <span className="metric-icon"><ShieldCheck /></span>
           <span className="metric-copy"><strong>{activeUsers}</strong><small>Active accounts</small></span>
         </div>
+      </section>
+      <section className="platform-panel">
+        <div className="section-heading platform-heading">
+          <div>
+            <p className="eyebrow dark">New customer</p>
+            <h2>Create a workspace</h2>
+          </div>
+        </div>
+        <form className="platform-create-workspace" onSubmit={(event) => void createWorkspace(event)}>
+          <label>
+            Company name
+            <input required minLength={2} maxLength={200} value={newCompanyName} onChange={(event) => setNewCompanyName(event.target.value)} placeholder="Cedar Landscaping" />
+          </label>
+          <label>
+            Owner email
+            <input required type="email" value={newOwnerEmail} onChange={(event) => setNewOwnerEmail(event.target.value)} placeholder="owner@company.com" />
+          </label>
+          <button className="primary compact" disabled={creatingWorkspace}>
+            <Building2 />{creatingWorkspace ? "Creating…" : "Create and invite owner"}
+          </button>
+        </form>
+        <p className="settings-note">The owner joins as the workspace admin through a one-time invitation link that expires in 14 days. Send it to them directly.</p>
+        {createStatus && <p className="settings-status" role="status">{createStatus}</p>}
+        {workspaceLink && (
+          <label className="platform-invite-link">
+            Invitation link
+            <input readOnly value={workspaceLink} onFocus={(event) => event.currentTarget.select()} />
+          </label>
+        )}
       </section>
       <section className="platform-panel">
         <div className="section-heading platform-heading">

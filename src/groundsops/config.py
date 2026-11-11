@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     auth_mode: str = "development"
     demo_workspace_enabled: bool = False
+    # New company workspaces are created by platform admins and invitations unless enabled.
+    self_service_signup_enabled: bool = False
     rate_limit_enabled: bool = False
     rate_limit_requests: int = Field(default=240, ge=10, le=10000)
     rate_limit_window_seconds: int = Field(default=60, ge=1, le=3600)

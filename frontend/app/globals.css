@@ -3622,19 +3622,6 @@ textarea:focus {
   0%, 100% { transform: rotate(3deg) translateY(0); }
   50% { transform: rotate(2deg) translateY(-0.5rem); }
 }
-.showcase-chip {
-  position: absolute; z-index: 2; display: grid; gap: 0.1rem;
-  padding: 0.7rem 0.95rem; border-radius: 0.9rem;
-  background: rgba(255, 255, 255, 0.94); color: var(--ink);
-  box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.35);
-}
-.showcase-chip small { color: var(--muted); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
-.showcase-chip strong { font-size: 1.15rem; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.showcase-chip.quote { left: 38%; top: -0.6rem; }
-.showcase-chip.area { left: 4%; bottom: 0.2rem; grid-auto-flow: column; align-items: center; gap: 0.6rem; }
-.showcase-chip.area svg { width: 2rem; height: 2rem; padding: 0.4rem; border-radius: 0.55rem; background: #e7f7eb; color: var(--forest); }
-.showcase-chip.area span { display: grid; }
-.showcase-chip.area small { text-transform: none; letter-spacing: 0; font-weight: 600; }
 
 .login-panel { position: relative; }
 .login-card {
@@ -3652,9 +3639,6 @@ textarea:focus {
   background: url("/patterns/contour-light.svg") 0 0 / 640px 640px;
 }
 
-@media (max-width: 1100px) {
-  .showcase-chip.quote { left: auto; right: 0; }
-}
 @media (max-width: 850px) {
   .login-shell { grid-template-columns: 1fr; }
   .login-brand { min-height: auto; gap: 1.5rem; }
@@ -3668,3 +3652,11 @@ textarea:focus {
 @media (prefers-reduced-motion: reduce) {
   .login-brand, .showcase-card.after { animation: none; }
 }
+
+/* ---- Platform admin: create workspace ---- */
+.platform-create-workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 0.85rem; align-items: end; margin-top: 1rem; }
+.platform-create-workspace label, .platform-invite-link { display: grid; gap: 0.4rem; font-weight: 700; font-size: 0.85rem; }
+.platform-create-workspace .primary { min-height: 3rem; white-space: nowrap; }
+.platform-invite-link { margin-top: 0.75rem; }
+.platform-invite-link input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem; }
+@media (max-width: 760px) { .platform-create-workspace { grid-template-columns: 1fr; } }
