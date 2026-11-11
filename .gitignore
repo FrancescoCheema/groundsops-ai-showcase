@@ -8,6 +8,7 @@ __pycache__/
 .env.*
 !.env.example
 !.env.staging.example
+!.env.demo.example
 .coverage
 htmlcov/
 dist/

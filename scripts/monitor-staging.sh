@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# The same scripts run staging and production; production sets GROUNDSOPS_ENV_FILE=.env.production.
+env_file="${GROUNDSOPS_ENV_FILE:-.env.staging}"
+export GROUNDSOPS_ENV_FILE="$env_file"
+
 project_dir="${GROUNDSOPS_DIR:-/opt/groundsops/app}"
 backup_dir="${GROUNDSOPS_BACKUP_DIR:-/opt/groundsops/backups}"
 disk_threshold="${GROUNDSOPS_DISK_THRESHOLD_PERCENT:-85}"
@@ -28,7 +32,7 @@ if (( backup_age_hours < 0 || backup_age_hours > backup_max_age_hours )); then
   failures+=("backup_age")
 fi
 
-compose=(docker compose --env-file .env.staging -f docker-compose.staging.yml)
+compose=(docker compose --env-file "$env_file" -f docker-compose.staging.yml)
 for service in db api web; do
   container_id="$("${compose[@]}" ps -q "$service")"
   if [[ -z "$container_id" ]] || [[ "$(docker inspect -f '{{.State.Status}}' "$container_id")" != "running" ]]; then

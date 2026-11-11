@@ -962,6 +962,11 @@ def get_invoice_logo(principal: CurrentPrincipal, db: DbSession) -> Response:
     return Response(content=content, media_type=organization.invoice_logo_media_type)
 
 
+def _public_demo() -> bool:
+    """A public demo server: development sign-in is limited to the seeded demo workspace."""
+    return get_settings().app_env == "demo"
+
+
 @router.post(
     "/auth/development-bootstrap",
     response_model=DevelopmentBootstrapResponse,
@@ -971,6 +976,8 @@ def get_invoice_logo(principal: CurrentPrincipal, db: DbSession) -> Response:
 def bootstrap_development_tenant(
     payload: DevelopmentBootstrapRequest, db: DbSession
 ) -> DevelopmentBootstrapResponse:
+    if _public_demo():
+        raise HTTPException(status_code=404, detail="Not found")
     organization = Organization(name=payload.organization_name)
     db.add(organization)
     db.flush()
@@ -998,6 +1005,8 @@ def bootstrap_development_tenant(
     dependencies=[Depends(ensure_development_auth)],
 )
 def issue_development_token(payload: DevelopmentTokenRequest, db: DbSession) -> TokenResponse:
+    if _public_demo() and payload.organization_id != get_settings().demo_organization_id:
+        raise HTTPException(status_code=404, detail="Active user not found")
     user = db.scalar(
         select(OrganizationUser).where(
             OrganizationUser.organization_id == payload.organization_id,
@@ -1019,6 +1028,8 @@ def issue_development_token(payload: DevelopmentTokenRequest, db: DbSession) -> 
 def issue_development_signup_token(
     payload: DevelopmentSignupTokenRequest,
 ) -> TokenResponse:
+    if _public_demo():
+        raise HTTPException(status_code=404, detail="Not found")
     token, expires_in = create_development_signup_token(payload.email.lower(), payload.display_name)
     return TokenResponse(access_token=token, expires_in=expires_in)
 

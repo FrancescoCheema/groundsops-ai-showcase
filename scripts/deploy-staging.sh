@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# The same scripts run staging and production; production sets GROUNDSOPS_ENV_FILE=.env.production.
+env_file="${GROUNDSOPS_ENV_FILE:-.env.staging}"
+export GROUNDSOPS_ENV_FILE="$env_file"
+
 project_dir="${GROUNDSOPS_DIR:-/opt/groundsops/app}"
 deploy_branch="${GROUNDSOPS_BRANCH:-main}"
 deploy_revision="${GROUNDSOPS_REVISION:-}"
 deploy_key="${GROUNDSOPS_DEPLOY_KEY:-$HOME/.ssh/groundsops_deploy}"
 cd "$project_dir"
 
-if [[ ! -f .env.staging ]]; then
-  echo "Missing $project_dir/.env.staging"
+if [[ ! -f "$env_file" ]]; then
+  echo "Missing $project_dir/$env_file"
   exit 1
 fi
 
@@ -39,26 +43,26 @@ else
 fi
 
 echo "Deploying commit $(git rev-parse HEAD)."
-docker compose --env-file .env.staging -f docker-compose.staging.yml build
-docker compose --env-file .env.staging -f docker-compose.staging.yml up -d db
-docker compose --env-file .env.staging -f docker-compose.staging.yml run --rm api \
+docker compose --env-file "$env_file" -f docker-compose.staging.yml build
+docker compose --env-file "$env_file" -f docker-compose.staging.yml up -d db
+docker compose --env-file "$env_file" -f docker-compose.staging.yml run --rm api \
   alembic upgrade head
-docker compose --env-file .env.staging -f docker-compose.staging.yml up -d
+docker compose --env-file "$env_file" -f docker-compose.staging.yml up -d
 
 set -a
-# shellcheck disable=SC1091
-source .env.staging
+# shellcheck disable=SC1090,SC1091
+source "$env_file"
 set +a
 
 for attempt in {1..20}; do
   if curl --fail --silent --show-error "https://${APP_DOMAIN}/ready" >/dev/null; then
-    docker compose --env-file .env.staging -f docker-compose.staging.yml ps
+    docker compose --env-file "$env_file" -f docker-compose.staging.yml ps
     echo "GroundsOps staging deployment is healthy."
     exit 0
   fi
   sleep 3
 done
 
-docker compose --env-file .env.staging -f docker-compose.staging.yml logs --tail=100
+docker compose --env-file "$env_file" -f docker-compose.staging.yml logs --tail=100
 echo "Deployment failed its readiness check."
 exit 1

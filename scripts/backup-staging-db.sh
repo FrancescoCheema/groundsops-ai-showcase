@@ -1,22 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# The same scripts run staging and production; production sets GROUNDSOPS_ENV_FILE=.env.production.
+env_file="${GROUNDSOPS_ENV_FILE:-.env.staging}"
+export GROUNDSOPS_ENV_FILE="$env_file"
+
 project_dir="${GROUNDSOPS_DIR:-/opt/groundsops/app}"
 backup_dir="${GROUNDSOPS_BACKUP_DIR:-/opt/groundsops/backups}"
 cd "$project_dir"
 
-if [[ ! -f .env.staging ]]; then
-  echo "Missing $project_dir/.env.staging"
+if [[ ! -f "$env_file" ]]; then
+  echo "Missing $project_dir/$env_file"
   exit 1
 fi
 
 set -a
-# shellcheck disable=SC1091
-source .env.staging
+# shellcheck disable=SC1090,SC1091
+source "$env_file"
 set +a
 
 compose() {
-  docker compose --env-file .env.staging -f docker-compose.staging.yml "$@"
+  docker compose --env-file "$env_file" -f docker-compose.staging.yml "$@"
 }
 
 if [[ -z "$(compose ps --status running --quiet db)" ]]; then

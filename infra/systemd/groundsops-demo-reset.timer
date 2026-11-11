@@ -1,0 +1,9 @@
+[Unit]
+Description=Reset the GroundsOps public demo nightly (about 1 a.m. Pacific)
+
+[Timer]
+OnCalendar=*-*-* 09:05:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

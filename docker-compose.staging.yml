@@ -43,7 +43,7 @@ services:
       context: .
     restart: unless-stopped
     env_file:
-      - .env.staging
+      - ${GROUNDSOPS_ENV_FILE:-.env.staging}
     environment:
       DATABASE_URL: postgresql+psycopg://groundsops:${POSTGRES_PASSWORD}@db:5432/groundsops
     depends_on:

@@ -1,0 +1,9 @@
+[Unit]
+Description=Reset the GroundsOps public demo workspace
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=GROUNDSOPS_ENV_FILE=.env.demo
+ExecStart=/opt/groundsops/app/scripts/reset-demo-server.sh

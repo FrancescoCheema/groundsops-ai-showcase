@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     auth_mode: str = "development"
     demo_workspace_enabled: bool = False
+    demo_organization_id: str = "00000000-0000-4000-8000-000000000001"
     # New company workspaces are created by platform admins and invitations unless enabled.
     self_service_signup_enabled: bool = False
     rate_limit_enabled: bool = False
