@@ -6,7 +6,7 @@ from PIL import Image
 
 root = Path("docs/assets")
 problems: list[str] = []
-email = re.compile(rb"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", re.I)
+email = re.compile(rb"\b[A-Z0-9][A-Z0-9._%+-]*@[A-Z0-9][A-Z0-9-]*(?:\.[A-Z0-9-]+)*\.[A-Z]{2,}\b", re.I)
 for path in root.rglob("*") if root.exists() else []:
     if not path.is_file():
         continue
