@@ -58,3 +58,10 @@ resource "aws_cognito_user_pool_client" "web" {
     refresh_token = "days"
   }
 }
+
+# Members of this group see Platform admin in the app and can create customer workspaces.
+resource "aws_cognito_user_group" "platform_admins" {
+  name         = "groundsops-platform-admins"
+  user_pool_id = aws_cognito_user_pool.groundsops.id
+  description  = "GroundsOps operators who can create and manage customer workspaces"
+}
