@@ -119,7 +119,7 @@ cloud-init status --wait
 docker --version
 git clone https://github.com/FrancescoCheema/GroundsOps-AI.git /opt/groundsops/app
 cd /opt/groundsops/app
-git switch feature/web-foundation
+git switch main
 cp .env.staging.example .env.staging
 nano .env.staging
 ```
@@ -172,8 +172,17 @@ docker compose --env-file .env.staging -f docker-compose.staging.yml ps
 docker compose --env-file .env.staging -f docker-compose.staging.yml logs --tail=100
 ```
 
-Open the HTTPS URL in a browser, create the first company through Cognito, verify the email, sign in,
-and upload a small test file.
+Sign-up is invite-only, so create the first workspace (your own) from the server and open the
+invitation link it prints:
+
+```bash
+docker compose --env-file .env.staging -f docker-compose.staging.yml exec -T api \
+  python scripts/create-workspace.py --name "Your Company" --owner-email you@example.com
+```
+
+Open the link, create your Cognito account with that exact email, verify it, and upload a small test
+file. To manage other companies from **Platform admin**, add yourself to the
+`groundsops-platform-admins` Cognito group (see the Cognito outputs in `infra/cognito`).
 
 ## 8. Connect the iOS application
 

@@ -49,7 +49,21 @@ Register a self-hosted GitHub Actions runner on the production server **with onl
 The workflow checks the commit is on `main`, syncs the server checkout to it, takes a verified
 database backup, builds, runs migrations and checks `/ready`.
 
-## 5. Prove recovery
+## 5. Create your first workspace
+
+A fresh production database has no users, and sign-up is invite-only. Create your own workspace from
+the server, open the printed link, and sign up with that exact email:
+
+```bash
+cd /opt/groundsops/app
+docker compose --env-file .env.production -f docker-compose.staging.yml exec -T api \
+  python scripts/create-workspace.py --name "GroundsOps" --owner-email you@example.com
+```
+
+Then add yourself to the `groundsops-platform-admins` group in the **production** Cognito pool, and
+create customer workspaces from **Platform admin → Create a workspace**.
+
+## 6. Prove recovery
 
 Run `scripts/verify-backup-restore.sh` once against a production backup, and
 `scripts/configure-lightsail-alarms.ps1` for the production instance.

@@ -239,8 +239,9 @@ class OrganizationInvitation(Base):
     organization_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("organizations.id"), index=True
     )
-    invited_by_user_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("organization_users.id"), index=True
+    # None for invitations created by an operator script rather than a signed-in user.
+    invited_by_user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("organization_users.id"), index=True, nullable=True
     )
     email: Mapped[str] = mapped_column(String(320), index=True)
     role: Mapped[str] = mapped_column(String(20), default=OrganizationRole.CREW.value)

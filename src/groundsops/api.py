@@ -144,6 +144,7 @@ from groundsops.schemas import (
     WorkOrderVarianceRead,
 )
 from groundsops.storage import get_object_storage, tenant_storage_key
+from groundsops.workspaces import EmailAlreadyInWorkspace, create_workspace_with_owner_invite
 
 router = APIRouter(prefix="/api/v1")
 DbSession = Annotated[Session, Depends(get_db)]
@@ -1433,25 +1434,18 @@ def create_platform_workspace(
     db: DbSession,
 ) -> dict:
     """Create a company workspace and invite its first administrator."""
-    email = payload.admin_email.lower().strip()
-    if db.scalar(select(OrganizationUser).where(OrganizationUser.email == email)) is not None:
-        raise HTTPException(status_code=409, detail="That email already belongs to a workspace")
-    organization = Organization(name=payload.organization_name.strip())
-    db.add(organization)
-    db.flush()
-    token = secrets.token_urlsafe(32)
-    invitation = OrganizationInvitation(
-        organization_id=organization.id,
-        invited_by_user_id=principal.user_id,
-        email=email,
-        role=OrganizationRole.ADMIN.value,
-        token_hash=hashlib.sha256(token.encode()).hexdigest(),
-        expires_at=datetime.now(UTC) + timedelta(days=payload.expires_in_days),
-    )
-    db.add(invitation)
-    db.commit()
-    db.refresh(organization)
-    db.refresh(invitation)
+    try:
+        organization, invitation, token = create_workspace_with_owner_invite(
+            db,
+            organization_name=payload.organization_name,
+            owner_email=payload.admin_email,
+            expires_in_days=payload.expires_in_days,
+            invited_by_user_id=principal.user_id,
+        )
+    except EmailAlreadyInWorkspace as exc:
+        raise HTTPException(
+            status_code=409, detail="That email already belongs to a workspace"
+        ) from exc
     created = InvitationRead.model_validate(invitation).model_dump()
     created["acceptance_token"] = token
     return {"organization": organization, "invitation": created}
