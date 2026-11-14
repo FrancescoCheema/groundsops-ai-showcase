@@ -64,6 +64,22 @@ The designer brushes only the area the model may change. Everything outside the 
   <img src="docs/assets/ai-concept-result.png" alt="GroundsOps evaluated AI landscape concept" width="900">
 </p>
 
+### Measured area on the concept
+
+The area the model changed is outlined and sized on the concept, calibrated from a reference line of known length drawn on the photo.
+
+<p align="center">
+  <img src="docs/assets/measured-concept.jpg" alt="AI sod concept with the measured 520 sq ft area outlined, plus area, edge length and measurement method" width="700">
+</p>
+
+### Itemised estimate from the company price list
+
+Material (including waste), labour, delivery and tax come from each company's own price list and can be adjusted per job.
+
+<p align="center">
+  <img src="docs/assets/itemised-estimate.jpg" alt="Itemised estimate: sod, labour, delivery, subtotal, tax and total in CAD" width="700">
+</p>
+
 ### Private company file vault
 
 <p align="center">
