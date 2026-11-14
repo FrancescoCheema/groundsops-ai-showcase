@@ -145,12 +145,13 @@ export type GenerationJob = {
   provider: string;
   model_version: string;
   status: "queued" | "running" | "succeeded" | "failed";
-  measurement_method?: "mask_pixels" | "reference_line" | null;
+  measurement_method?: "mask_pixels" | "reference_line" | "camera_reference" | "reference_object" | null;
   selected_pixel_count?: number | null;
   total_pixel_count?: number | null;
   calibration_pixel_length?: string | null;
   calibration_real_length?: string | null;
   calibration_unit?: "ft" | "m" | null;
+  calibration_reference?: string | null;
   estimated_area?: string | null;
   estimated_perimeter?: string | null;
   measurement_confidence?: "uncalibrated" | "photo_estimate" | null;

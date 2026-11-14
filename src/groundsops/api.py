@@ -71,6 +71,7 @@ from groundsops.models import (
     WorkOrder,
     WorkOrderStatus,
 )
+from groundsops.quote_pdf import Party, QuoteDocument, QuoteLine, render_quote_pdf
 from groundsops.schemas import (
     CurrentUserRead,
     CustomerCreate,
@@ -1998,8 +1999,10 @@ async def create_generation_job(
     estimated_area: Annotated[Decimal | None, Form(gt=0)] = None,
     estimated_perimeter: Annotated[Decimal | None, Form(gt=0)] = None,
     measurement_method: Annotated[
-        str | None, Form(pattern="^(mask_pixels|reference_line|camera_reference)$")
+        str | None,
+        Form(pattern="^(mask_pixels|reference_line|camera_reference|reference_object)$"),
     ] = None,
+    calibration_reference: Annotated[str | None, Form(max_length=80)] = None,
 ) -> GenerationJob:
     settings = get_settings()
     if settings.inference_provider not in {"replicate", "mock"}:
@@ -2065,6 +2068,11 @@ async def create_generation_job(
         calibration_pixel_length=calibration_pixel_length if calibrated else None,
         calibration_real_length=calibration_real_length if calibrated else None,
         calibration_unit=calibration_unit if calibrated else None,
+        calibration_reference=(
+            calibration_reference.strip() or None
+            if calibrated and measurement_method == "reference_object" and calibration_reference
+            else None
+        ),
         estimated_area=estimated_area if calibrated else None,
         estimated_perimeter=estimated_perimeter if calibrated else None,
         measurement_confidence="photo_estimate" if calibrated else "uncalibrated",
@@ -2585,6 +2593,98 @@ def get_quote(quote_id: str, principal: CurrentPrincipal, db: DbSession) -> Quot
     if record is None:
         raise HTTPException(status_code=404, detail="Quote not found")
     return record
+
+
+def _measurement_summary(job: GenerationJob | None) -> str | None:
+    if not job or not job.estimated_area or not job.calibration_unit:
+        return None
+    unit = job.calibration_unit
+    parts = [f"Measured area about {job.estimated_area:,.0f} sq {unit}"]
+    if job.estimated_perimeter:
+        parts.append(f"edge length about {job.estimated_perimeter:,.0f} {unit}")
+    if job.measurement_method == "reference_object" and job.calibration_reference:
+        parts.append(f"measured from the photo using {job.calibration_reference.lower()}")
+    else:
+        parts.append("measured from the photo")
+    return ", ".join(parts) + ". Final quantities are confirmed on site."
+
+
+@router.get("/quotes/{quote_id}/pdf", response_class=Response)
+def get_quote_pdf(quote_id: str, principal: CurrentPrincipal, db: DbSession) -> Response:
+    """The quote as a customer-ready PDF with the company logo and the approved concept."""
+    quote = get_quote(quote_id, principal, db)
+    organization = db.get(Organization, principal.organization_id)
+    design = db.get(DesignProject, quote.design_project_id)
+    site = db.get(Property, design.property_id) if design else None
+    customer = db.get(Customer, site.customer_id) if site and site.customer_id else None
+    job = db.get(GenerationJob, quote.generation_job_id) if quote.generation_job_id else None
+    if job and job.organization_id != principal.organization_id:
+        job = None
+    storage = get_object_storage()
+
+    def stored(key: str | None) -> bytes | None:
+        if not key:
+            return None
+        try:
+            return storage.get(key)
+        except Exception:
+            return None
+
+    capture = db.get(SiteCapture, job.capture_id) if job else None
+    # Company contact details are entered on invoices; use the most recent ones.
+    contact = db.scalar(
+        select(Invoice)
+        .where(Invoice.organization_id == principal.organization_id)
+        .order_by(Invoice.created_at.desc())
+        .limit(1)
+    )
+    document = QuoteDocument(
+        number=quote.number,
+        title=quote.title,
+        created_at=quote.created_at,
+        currency=quote.currency,
+        lines=[
+            QuoteLine(item.description, item.quantity, item.unit, item.unit_price, item.line_total)
+            for item in sorted(quote.items, key=lambda item: item.position)
+        ],
+        subtotal=quote.subtotal,
+        markup_amount=quote.markup_amount,
+        discount_amount=quote.discount_amount,
+        tax_rate=quote.tax_rate,
+        tax_amount=quote.tax_amount,
+        total=quote.total,
+        assumptions=quote.assumptions,
+        company=Party(
+            name=organization.name if organization else "",
+            email=contact.company_email if contact else None,
+            phone=contact.company_phone if contact else None,
+            address=contact.company_address if contact else None,
+        ),
+        customer=(
+            Party(customer.name, customer.email, customer.phone, customer.address)
+            if customer
+            else None
+        ),
+        property_name=site.name if site else None,
+        property_location=site.location if site else None,
+        measurement=_measurement_summary(job),
+        logo=stored(organization.invoice_logo_storage_key or organization.logo_storage_key)
+        if organization
+        else None,
+        before_photo=stored(capture.storage_key) if capture and capture.organization_id
+        == principal.organization_id else None,
+        concept_photo=stored(job.output_storage_key) if job else None,
+    )
+    filename = f"{quote.number}.pdf".replace('"', "")
+    return Response(
+        content=render_quote_pdf(document),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.patch("/quotes/{quote_id}/status", response_model=QuoteRead)

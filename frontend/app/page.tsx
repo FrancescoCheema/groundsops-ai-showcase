@@ -3549,6 +3549,8 @@ function DesignStudio({
         data.append("calibration_real_length", String(maskMeasurement.calibrationRealLength));
       if (maskMeasurement.calibrationUnit)
         data.append("calibration_unit", maskMeasurement.calibrationUnit);
+      if (maskMeasurement.calibrationReference)
+        data.append("calibration_reference", maskMeasurement.calibrationReference);
       if (maskMeasurement.estimatedArea)
         data.append("estimated_area", String(maskMeasurement.estimatedArea));
       if (maskMeasurement.estimatedPerimeter)

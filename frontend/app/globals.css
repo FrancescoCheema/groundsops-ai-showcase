@@ -3730,3 +3730,27 @@ textarea:focus {
 .measurement-tiles .measurement-method strong { font-size: 0.95rem; letter-spacing: 0; }
 .measurement-tiles small { color: var(--muted); font-size: 0.75rem; }
 .measurement-missing { margin: 0; padding: 0.6rem 0.75rem; border-radius: 0.7rem; background: #fff8e6; color: #6b4b00; font-size: 0.82rem; }
+
+/* ---- Known-object measuring and edge warnings ---- */
+.mask-calibration.object { grid-template-columns: minmax(200px, 1fr) minmax(215px, .6fr) minmax(100px, .2fr); }
+.mask-custom-object { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 160px)); gap: .7rem; }
+.mask-warning { display: flex; gap: .6rem; align-items: flex-start; padding: .7rem .85rem; border-radius: 12px; border: 1px solid #f1d38a; background: #fff8e6; color: #5c4200; }
+.mask-warning svg { width: 1.1rem; height: 1.1rem; flex-shrink: 0; margin-top: .1rem; color: #b07800; }
+.mask-warning div { display: grid; gap: .15rem; }
+.mask-warning strong { font-size: .88rem; }
+.mask-warning span { font-size: .8rem; line-height: 1.4; }
+@media (max-width: 640px) {
+  .mask-calibration, .mask-calibration.object { grid-template-columns: 1fr 1fr; }
+  .mask-calibration > div:first-child { grid-column: 1 / -1; }
+}
+.mask-calibration { color: var(--ink); }
+.mask-calibration strong { color: var(--ink); }
+.mask-calibration input, .mask-calibration select { color: var(--ink); }
+.mask-calibration label { color: var(--ink); }
+
+/* ---- One-click quote PDF ---- */
+.quote-builder-wrap { display: grid; gap: .6rem; margin-top: .75rem; }
+.quote-one-click { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: space-between; padding: .85rem 1rem; border-radius: 14px; background: #eef8f1; border: 1px solid #cfe6d7; }
+.quote-one-click > div { display: grid; gap: .2rem; flex: 1 1 18rem; }
+.quote-one-click strong { font-size: .95rem; color: var(--ink); }
+.quote-one-click span { font-size: .8rem; color: var(--muted); line-height: 1.4; }

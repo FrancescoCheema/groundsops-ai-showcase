@@ -1,11 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, Check, Eraser, Paintbrush, Ruler, RotateCcw, X } from "lucide-react";
+import { Camera, Check, Eraser, Paintbrush, Ruler, RotateCcw, ScanLine, X } from "lucide-react";
+import {
+  REFERENCE_OBJECTS,
+  convertLength,
+  detectReferenceObject,
+  groundHomography,
+  longSidePixels,
+  measureSelection,
+  orderCorners,
+} from "@/features/design-studio/ground-plane";
 import type { MaskMeasurement } from "@/features/design-studio/mask-editor";
 
 type Point = { x: number; y: number };
-type DrawMode = "paint" | "erase" | "scale";
+type DrawMode = "paint" | "erase" | "scale" | "object";
 
 async function decodePhoto(file: File) {
   if ("createImageBitmap" in window) {
@@ -48,6 +57,9 @@ export function CameraMeasure({
   const [brushSize, setBrushSize] = useState(56);
   const [scalePoints, setScalePoints] = useState<Point[]>([]);
   const [knownLength, setKnownLength] = useState("4");
+  const [corners, setCorners] = useState<Point[]>([]);
+  const [objectId, setObjectId] = useState(REFERENCE_OBJECTS[0].id);
+  const [objectHint, setObjectHint] = useState("");
   const [unit, setUnit] = useState<"ft" | "m">("ft");
   const [measurement, setMeasurement] = useState<MaskMeasurement>();
   const [cameraStatus, setCameraStatus] = useState<"idle" | "requesting" | "ready" | "error">("idle");
@@ -125,7 +137,27 @@ export function CameraMeasure({
       });
       context.restore();
     }
-  }, [scalePoints]);
+    if (corners.length) {
+      context.save();
+      context.strokeStyle = "#ffd166";
+      context.lineWidth = Math.max(4, canvas.width / 250);
+      context.beginPath();
+      corners.forEach((p, i) => (i ? context.lineTo(p.x, p.y) : context.moveTo(p.x, p.y)));
+      if (corners.length === 4) {
+        context.closePath();
+        context.fillStyle = "rgba(255, 209, 102, .3)";
+        context.fill();
+      }
+      context.stroke();
+      context.fillStyle = "#ffd166";
+      corners.forEach((p) => {
+        context.beginPath();
+        context.arc(p.x, p.y, Math.max(10, canvas.width / 110), 0, Math.PI * 2);
+        context.fill();
+      });
+      context.restore();
+    }
+  }, [corners, scalePoints]);
 
   const calculate = useCallback(() => {
     const mask = maskRef.current;
@@ -139,35 +171,46 @@ export function CameraMeasure({
       selectedPixelCount += selected[index];
     }
     if (!selectedPixelCount) { setMeasurement(undefined); return; }
-    let perimeterPixels = 0;
-    for (let y = 0; y < mask.height; y += 1) {
-      for (let x = 0; x < mask.width; x += 1) {
-        const index = y * mask.width + x;
-        if (!selected[index]) continue;
-        perimeterPixels += Number(x === 0 || !selected[index - 1]);
-        perimeterPixels += Number(x === mask.width - 1 || !selected[index + 1]);
-        perimeterPixels += Number(y === 0 || !selected[index - mask.width]);
-        perimeterPixels += Number(y === mask.height - 1 || !selected[index + mask.width]);
+    const shared = { selectedPixelCount, totalPixelCount: selected.length, selectedPercent: selectedPixelCount / selected.length * 100 };
+    const object = REFERENCE_OBJECTS.find((item) => item.id === objectId) ?? REFERENCE_OBJECTS[0];
+    const homography = corners.length === 4 ? groundHomography(corners, object, { width: mask.width, height: mask.height }) : null;
+    let next: MaskMeasurement = { ...shared, method: "mask_pixels", confidence: "uncalibrated" };
+    if (homography) {
+      const ground = measureSelection(selected, mask.width, mask.height, { homography });
+      const factor = convertLength(1, object.unit, unit);
+      if (!ground.beyondGround && ground.area && ground.perimeter) next = {
+        ...shared,
+        method: "reference_object",
+        confidence: "photo_estimate",
+        calibrationReference: object.label,
+        calibrationPixelLength: longSidePixels(corners),
+        calibrationRealLength: convertLength(object.length, object.unit, unit),
+        calibrationUnit: unit,
+        estimatedArea: ground.area * factor * factor,
+        estimatedPerimeter: ground.perimeter * factor,
+      };
+      setObjectHint(ground.beyondGround ? "Part of the painted area is above the ground. Erase sky, fences or walls from it." : "Drag any corner to fine-tune.");
+    } else {
+      const realLength = Number(knownLength);
+      const scalePixels = scalePoints.length === 2 ? distance(scalePoints[0], scalePoints[1]) : 0;
+      const unitsPerPixel = scalePixels >= 2 && realLength > 0 ? realLength / scalePixels : undefined;
+      if (unitsPerPixel) {
+        const flat = measureSelection(selected, mask.width, mask.height, { unitsPerPixel });
+        next = {
+          ...shared,
+          method: "camera_reference",
+          confidence: "photo_estimate",
+          calibrationPixelLength: scalePixels,
+          calibrationRealLength: realLength,
+          calibrationUnit: unit,
+          estimatedArea: flat.area,
+          estimatedPerimeter: flat.perimeter,
+        };
       }
     }
-    const realLength = Number(knownLength);
-    const scalePixels = scalePoints.length === 2 ? distance(scalePoints[0], scalePoints[1]) : 0;
-    const unitsPerPixel = scalePixels >= 2 && realLength > 0 ? realLength / scalePixels : undefined;
-    const next: MaskMeasurement = {
-      method: unitsPerPixel ? "camera_reference" : "mask_pixels",
-      selectedPixelCount,
-      totalPixelCount: selected.length,
-      selectedPercent: selectedPixelCount / selected.length * 100,
-      calibrationPixelLength: unitsPerPixel ? scalePixels : undefined,
-      calibrationRealLength: unitsPerPixel ? realLength : undefined,
-      calibrationUnit: unitsPerPixel ? unit : undefined,
-      estimatedArea: unitsPerPixel ? selectedPixelCount * unitsPerPixel * unitsPerPixel : undefined,
-      estimatedPerimeter: unitsPerPixel ? perimeterPixels * unitsPerPixel : undefined,
-      confidence: unitsPerPixel ? "photo_estimate" : "uncalibrated",
-    };
     setMeasurement(next);
     onMeasurementRef.current(next);
-  }, [knownLength, scalePoints, unit]);
+  }, [corners, knownLength, objectId, scalePoints, unit]);
 
   const updateLive = useCallback(() => {
     renderCanvas();
@@ -175,7 +218,7 @@ export function CameraMeasure({
     measurementFrameRef.current = requestAnimationFrame(calculate);
   }, [calculate, renderCanvas]);
 
-  useEffect(() => { if (captured) updateLive(); }, [captured, knownLength, scalePoints, unit, updateLive]);
+  useEffect(() => { if (captured) updateLive(); }, [captured, corners, knownLength, objectId, scalePoints, unit, updateLive]);
 
   function initialize(width: number, height: number, source: CanvasImageSource) {
     const canvas = canvasRef.current;
@@ -190,6 +233,8 @@ export function CameraMeasure({
     mask.height = height;
     maskRef.current = mask;
     setScalePoints([]);
+    setCorners([]);
+    setObjectHint("");
     setMeasurement(undefined);
     setMode("paint");
   }
@@ -268,6 +313,22 @@ export function CameraMeasure({
     if (!captured) return;
     const next = point(event);
     event.currentTarget.setPointerCapture(event.pointerId);
+    if (mode === "object") {
+      const radius = 32 * event.currentTarget.width / event.currentTarget.getBoundingClientRect().width;
+      const index = corners.findIndex((candidate) => distance(candidate, next) <= radius);
+      if (index >= 0) { scaleDragRef.current = { index, pointerId: event.pointerId }; return; }
+      if (corners.length === 0 || corners.length === 4) {
+        const frame = frameRef.current;
+        const found = frame ? detectReferenceObject(frame.data, frame.width, frame.height, next) : null;
+        if (found) { setCorners(found); setObjectHint("Found it. Drag any corner if it is not exactly on the object."); }
+        else { setCorners([next]); setObjectHint("Couldn't find its edges automatically. Tap the other 3 corners."); }
+        return;
+      }
+      const placed = [...corners, next];
+      setCorners(placed.length === 4 ? orderCorners(placed) : placed);
+      setObjectHint(placed.length === 4 ? "Drag any corner to fine-tune." : `Tap ${4 - placed.length} more corner${placed.length === 3 ? "" : "s"}.`);
+      return;
+    }
     if (mode === "scale") {
       const radius = 32 * event.currentTarget.width / event.currentTarget.getBoundingClientRect().width;
       const index = scalePoints.findIndex((candidate) => distance(candidate, next) <= radius);
@@ -284,7 +345,8 @@ export function CameraMeasure({
     const next = point(event);
     const drag = scaleDragRef.current;
     if (drag?.pointerId === event.pointerId) {
-      setScalePoints((current) => current.map((value, index) => index === drag.index ? next : value));
+      if (mode === "object") setCorners((current) => current.map((value, index) => index === drag.index ? next : value));
+      else setScalePoints((current) => current.map((value, index) => index === drag.index ? next : value));
       return;
     }
     if (!drawingRef.current || !previousRef.current) return;
@@ -307,17 +369,19 @@ export function CameraMeasure({
   return <div className="camera-measure-shell">
     <button type="button" className={buttonClassName} onClick={() => void startCamera()}><Camera />Measure with camera</button>
     {open && <div className="camera-measure-dialog" role="dialog" aria-modal="true" aria-label="Camera measurement"><div className="camera-measure-panel">
-      <header><div><strong>Camera Measure</strong><span>Capture the ground, paint the work area and calibrate one known length.</span></div><button type="button" onClick={close} aria-label="Close camera measurement"><X /></button></header>
+      <header><div><strong>Camera Measure</strong><span>Lay a sheet of paper or a patio slab on the ground, capture the area, paint the work area and tap the object.</span></div><button type="button" onClick={close} aria-label="Close camera measurement"><X /></button></header>
       <div className="camera-measure-stage">
         {!captured && <video ref={videoRef} muted playsInline autoPlay onCanPlay={() => setVideoReady(Boolean(videoRef.current?.videoWidth))} />}
         <canvas ref={canvasRef} hidden={!captured} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} />
         {!captured && !videoReady && <div className="camera-measure-status" role="status">{cameraStatus === "requesting" ? "Requesting camera access…" : cameraStatus === "error" ? "Live preview unavailable" : "Starting camera…"}</div>}
       </div>
       {!captured ? <div className="camera-measure-start-actions"><button type="button" className="primary compact" disabled={!videoReady} onClick={capture}><Camera />Capture measurement frame</button><label className="secondary compact camera-photo-fallback"><Camera />Take or choose photo<input type="file" accept="image/*" capture="environment" onChange={(event) => { void importPhoto(event.target.files?.[0]); event.currentTarget.value = ""; }} /></label></div> : <>
-        <div className="camera-measure-controls"><button type="button" className={mode === "paint" ? "active" : ""} onClick={() => setMode("paint")}><Paintbrush />Paint area</button><button type="button" className={mode === "erase" ? "active" : ""} onClick={() => setMode("erase")}><Eraser />Erase</button><button type="button" className={mode === "scale" ? "active" : ""} onClick={() => setMode("scale")}><Ruler />Set scale</button><button type="button" onClick={clearSelection}><RotateCcw />Clear area</button></div>
-        {mode !== "scale" && <label className="camera-measure-brush">Brush size<input type="range" min="12" max="160" value={brushSize} onChange={(event) => setBrushSize(Number(event.target.value))} /></label>}
-        <div className="camera-measure-scale"><label>Known length<input type="number" min="0.1" step="0.1" value={knownLength} onChange={(event) => setKnownLength(event.target.value)} /></label><label>Unit<select value={unit} onChange={(event) => setUnit(event.target.value as "ft" | "m")}><option value="ft">feet</option><option value="m">metres</option></select></label></div>
-        <p>Paint or erase the exact work area. Results update while you draw.</p><p>Choose Set scale, place two yellow points over the known length, and drag either point to adjust it.</p>
+        <div className="camera-measure-controls"><button type="button" className={mode === "paint" ? "active" : ""} onClick={() => setMode("paint")}><Paintbrush />Paint area</button><button type="button" className={mode === "erase" ? "active" : ""} onClick={() => setMode("erase")}><Eraser />Erase</button><button type="button" className={mode === "object" ? "active" : ""} onClick={() => { setMode("object"); if (!corners.length) setObjectHint("Tap the object lying on the ground."); }}><ScanLine />Known object</button><button type="button" className={mode === "scale" ? "active" : ""} onClick={() => setMode("scale")}><Ruler />Line</button><button type="button" onClick={clearSelection}><RotateCcw />Clear area</button></div>
+        {mode !== "scale" && mode !== "object" && <label className="camera-measure-brush">Brush size<input type="range" min="12" max="160" value={brushSize} onChange={(event) => setBrushSize(Number(event.target.value))} /></label>}
+        {mode === "scale" ? <div className="camera-measure-scale"><label>Known length<input type="number" min="0.1" step="0.1" value={knownLength} onChange={(event) => setKnownLength(event.target.value)} /></label><label>Unit<select value={unit} onChange={(event) => setUnit(event.target.value as "ft" | "m")}><option value="ft">feet</option><option value="m">metres</option></select></label></div>
+          : <div className="camera-measure-scale"><label>Object on the ground<select value={objectId} onChange={(event) => setObjectId(event.target.value)}>{REFERENCE_OBJECTS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label><label>Results in<select value={unit} onChange={(event) => setUnit(event.target.value as "ft" | "m")}><option value="ft">feet</option><option value="m">metres</option></select></label></div>}
+        <p>Paint or erase the exact work area. Results update while you draw.</p>
+        <p>{mode === "object" ? (objectHint || "Tap the object lying on the ground.") : mode === "scale" ? "Place two yellow points over the known length, and drag either point to adjust it. Less accurate than a known object when the photo is at an angle." : "Then choose Known object and tap the paper or slab: it corrects for perspective."}</p>
         <div className="camera-measure-live" aria-live="polite"><div><span>Selected area</span><strong>{measurement ? `${measurement.selectedPercent.toFixed(1)}%` : "Paint an area"}</strong></div><div><span>Estimated area</span><strong>{measurement?.estimatedArea ? `${measurement.estimatedArea.toFixed(1)} sq ${unit}` : "Set scale"}</strong></div><div><span>Estimated perimeter</span><strong>{measurement?.estimatedPerimeter ? `${measurement.estimatedPerimeter.toFixed(1)} ${unit}` : "Set scale"}</strong></div></div>
         <button type="button" className="primary compact" disabled={!measurement?.estimatedArea} onClick={close}><Check />Use this measurement</button>
       </>}

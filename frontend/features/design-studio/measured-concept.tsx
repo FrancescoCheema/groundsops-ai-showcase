@@ -139,9 +139,11 @@ export function MeasuredConcept({ job, token }: { job: GenerationJob; token: str
   if (failed) return <div className="capture-loading">The generated concept could not be loaded.</div>;
   if (!images) return <div className="capture-loading">Loading generated concept…</div>;
 
-  const method = job.measurement_method === "reference_line"
-    ? `Calibrated from a reference line${job.calibration_real_length ? ` (${Number(job.calibration_real_length)} ${unit})` : ""}`
-    : "Scaled from the photo";
+  const method = job.measurement_method === "reference_object"
+    ? `Perspective-corrected from ${job.calibration_reference ? job.calibration_reference.replace(/^./, (c) => c.toLowerCase()) : "a known object"} on the ground`
+    : job.measurement_method === "reference_line" || job.measurement_method === "camera_reference"
+      ? `Calibrated from a reference line${job.calibration_real_length ? ` (${Number(job.calibration_real_length)} ${unit})` : ""}`
+      : "Scaled from the photo";
 
   return <div className="measured-concept">
     <div className="measured-concept-frame">

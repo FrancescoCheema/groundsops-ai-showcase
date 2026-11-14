@@ -1,9 +1,9 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { CalendarCheck, Check, FileText, Plus, Send, Trash2 } from "lucide-react";
+import { CalendarCheck, Check, Download, FileText, Plus, Send, Trash2 } from "lucide-react";
 
-import { GenerationMaterialEstimate, OrganizationUser, Quote, QuoteItem, WorkOrder, request } from "@/lib/api";
+import { GenerationMaterialEstimate, OrganizationUser, Quote, QuoteItem, WorkOrder, downloadAuthenticated, request } from "@/lib/api";
 import { formatDateTime, formatMoney } from "@/features/shared/format";
 
 const blankItem = (): QuoteItem => ({
@@ -58,7 +58,7 @@ export function QuoteBuilder({
       .then((record) => {
         setEstimate(record);
         setItems([
-          { description: `${record.material_type} materials`, category: "material", quantity: record.order_quantity, unit: record.material_unit, unit_price: record.unit_price },
+          { description: `${record.material_type.charAt(0).toUpperCase()}${record.material_type.slice(1)} materials`, category: "material", quantity: record.order_quantity, unit: record.material_unit, unit_price: record.unit_price },
           { description: "Installation labour", category: "labour", quantity: record.labour_hours, unit: "hour", unit_price: record.labour_rate },
           ...(Number(record.delivery_cost) > 0 ? [{ description: "Delivery", category: "delivery" as const, quantity: "1", unit: "delivery", unit_price: record.delivery_cost }] : []),
         ]);
@@ -123,24 +123,62 @@ export function QuoteBuilder({
     }
   }
 
+  async function downloadPdf(record: Quote) {
+    setBusyQuote(record.id);
+    try {
+      const blob = await downloadAuthenticated(`/api/v1/quotes/${record.id}/pdf`, token);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${record.number}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    } catch (error) {
+      onMessage(error instanceof Error ? error.message : "The quote PDF could not be created.");
+    } finally {
+      setBusyQuote("");
+    }
+  }
+
+  async function saveQuote() {
+    return request<Quote>("/api/v1/quotes", token, {
+      method: "POST",
+      body: JSON.stringify({
+        design_project_id: designId,
+        generation_job_id: jobId,
+        title,
+        items,
+        markup_rate: markup,
+        discount_amount: discount,
+        tax_rate: tax,
+        currency: "CAD",
+        assumptions,
+      }),
+    });
+  }
+
+  /** One click: save the quote exactly as prefilled from the estimate and download its PDF. */
+  async function createPdfQuote() {
+    setSaving(true);
+    try {
+      const created = await saveQuote();
+      setQuotes((current) => [created, ...current]);
+      await downloadPdf(created);
+      onMessage(`${created.number} created. The PDF is downloading, ready to send to the customer.`);
+    } catch (error) {
+      onMessage(error instanceof Error ? error.message : "Quote could not be created.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function create(event: FormEvent) {
     event.preventDefault();
     setSaving(true);
     try {
-      const created = await request<Quote>("/api/v1/quotes", token, {
-        method: "POST",
-        body: JSON.stringify({
-          design_project_id: designId,
-          generation_job_id: jobId,
-          title,
-          items,
-          markup_rate: markup,
-          discount_amount: discount,
-          tax_rate: tax,
-          currency: "CAD",
-          assumptions,
-        }),
-      });
+      const created = await saveQuote();
       setQuotes((current) => [created, ...current]);
       onMessage(`${created.number} saved as a draft.`);
     } catch (error) {
@@ -150,8 +188,13 @@ export function QuoteBuilder({
     }
   }
 
-  return <details className="quote-builder">
-    <summary><FileText />Create customer quote</summary>
+  return <div className="quote-builder-wrap">
+  <div className="quote-one-click">
+    <div><strong>Quote PDF for the customer</strong><span>{estimate ? `From the saved ${estimate.material_type} estimate, with your logo, the before and after photos, ${Number(markup)}% markup built into the prices and ${Number(tax)}% tax.` : "Save an estimate above first, or build the quote by hand below."}</span></div>
+    <button type="button" className="primary compact" disabled={saving || !estimate} onClick={() => void createPdfQuote()}><Download />{saving ? "Creating…" : "Create quote PDF"}</button>
+  </div>
+  <details className="quote-builder">
+    <summary><FileText />Edit lines before quoting</summary>
     <form onSubmit={create}>
       <label>Quote title<input value={title} minLength={2} maxLength={200} onChange={(event) => setTitle(event.target.value)} /></label>
       <div className="quote-lines">
@@ -171,11 +214,13 @@ export function QuoteBuilder({
       <button className="primary compact" disabled={saving}>{saving ? "Saving…" : "Save draft quote"}</button>
       {estimate && <small>Prefilled from the saved {estimate.material_type} estimate.</small>}
     </form>
+  </details>
     {quotes.length > 0 && <div className="quote-history"><strong>Quote history</strong>{quotes.map((record) => {
       const workOrder = workOrders.find((item) => item.quote_id === record.id);
       return <article className="quote-record" key={record.id}>
         <div className="quote-record-head"><span><strong>{record.number}</strong><small>{record.status}</small></span><b>{formatMoney(record.total, record.currency)}</b></div>
         <div className="quote-record-actions">
+          <button type="button" className="secondary compact" disabled={busyQuote === record.id} onClick={() => void downloadPdf(record)}><Download />PDF</button>
           {record.status === "draft" && <button type="button" className="secondary compact" disabled={busyQuote === record.id} onClick={() => void changeStatus(record, "sent")}><Send />Mark sent</button>}
           {record.status === "sent" && <button type="button" className="secondary compact" disabled={busyQuote === record.id} onClick={() => void changeStatus(record, "approved")}><Check />Approve quote</button>}
           {record.status === "approved" && !workOrder && <button type="button" className="primary compact" onClick={() => setScheduleQuote((current) => current === record.id ? "" : record.id)}><CalendarCheck />Schedule job</button>}
@@ -191,5 +236,5 @@ export function QuoteBuilder({
         </form>}
       </article>;
     })}</div>}
-  </details>;
+  </div>;
 }

@@ -27,10 +27,10 @@ Paint the area to change, generate the concept, and only the selected ground cha
 
 1. Create a customer and property.
 2. Upload or capture a site photo.
-3. Paint the exact area that may change.
+3. Paint the exact area that may change, and tap a sheet of paper or a patio slab lying on the ground to measure it with perspective correction. The editor warns when the selection runs along a path or wall.
 4. Generate and review an AI landscape concept.
-5. Convert calibrated area measurements into material and labour estimates.
-6. Build and approve a quote.
+5. Convert the measured area into material and labour estimates from the company price list.
+6. Create a customer-ready PDF quote in one click, with the company logo and before and after photos.
 7. Schedule a work order and assign crew.
 8. Complete the job, compare actuals and issue an invoice.
 

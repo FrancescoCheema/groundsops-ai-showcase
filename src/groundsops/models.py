@@ -457,6 +457,7 @@ class GenerationJob(Base):
     calibration_pixel_length: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
     calibration_real_length: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
     calibration_unit: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    calibration_reference: Mapped[str | None] = mapped_column(String(80), nullable=True)
     estimated_area: Mapped[Decimal | None] = mapped_column(Numeric(14, 4), nullable=True)
     estimated_perimeter: Mapped[Decimal | None] = mapped_column(Numeric(14, 4), nullable=True)
     measurement_confidence: Mapped[str | None] = mapped_column(String(30), nullable=True)

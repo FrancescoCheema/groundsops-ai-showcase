@@ -588,6 +588,7 @@ class GenerationJobRead(BaseModel):
     calibration_pixel_length: Decimal | None
     calibration_real_length: Decimal | None
     calibration_unit: str | None
+    calibration_reference: str | None = None
     estimated_area: Decimal | None
     estimated_perimeter: Decimal | None
     measurement_confidence: str | None
