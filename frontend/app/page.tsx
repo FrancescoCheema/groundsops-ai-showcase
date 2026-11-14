@@ -61,9 +61,11 @@ import { CaptureImage } from "@/features/design-studio/capture-image";
 import { CameraMeasure } from "@/features/design-studio/camera-measure";
 import { MaskEditor, type MaskMeasurement } from "@/features/design-studio/mask-editor";
 import { MaterialEstimator } from "@/features/design-studio/material-estimator";
+import { MeasuredConcept } from "@/features/design-studio/measured-concept";
 import { QuoteBuilder } from "@/features/quotes/quote-builder";
 import { loadWorkspaceSnapshot } from "@/features/shared/workspace-query";
 import { BillingBanner, BillingSettings, type BillingState, useBilling } from "@/features/billing";
+import { PriceListSettings } from "@/features/price-list";
 import { type View, workspaceTranslations } from "@/features/navigation/workspace-config";
 import { defaultOverviewPreferences, normalizeOverviewPreferences, type OverviewPreferences, type OverviewWidget } from "@/features/settings";
 import type { InvoiceSection } from "@/features/invoices/types";
@@ -1629,6 +1631,7 @@ function SettingsPanel({
           </label>
         </div>}
         <BillingSettings billing={billing} token={token} />
+        {(role === "admin" || role === "manager") && <PriceListSettings token={token} canEdit />}
         {role === "admin" && <div className="settings-section">
           <h3>Team access</h3>
           <p className="settings-note">Invite employees with the minimum access they need. Invitation links expire after seven days.</p>
@@ -3772,13 +3775,13 @@ function DesignStudio({
                     return <article className="generation-card" key={job.id}>
                       <div className="generation-card-heading"><span className={`generation-state ${job.status}`}>{job.status}</span>{latestReview && <span className={`review-state ${latestReview.decision}`}>{latestReview.decision.replace("_", " ")}</span>}<small>{formatDateTime(job.created_at)}</small></div>
                       <p>{job.prompt}</p>
-                      {job.estimated_area && job.calibration_unit && <div className="generation-measurement">
-                        <strong>Estimated work area</strong>
+                      {job.status !== "succeeded" && job.estimated_area && job.calibration_unit && <div className="generation-measurement">
+                        <strong>Measured area</strong>
                         <span>{Number(job.estimated_area).toFixed(1)} sq {job.calibration_unit}</span>
-                        {job.estimated_perimeter && <span>{Number(job.estimated_perimeter).toFixed(1)} {job.calibration_unit} perimeter</span>}
+                        {job.estimated_perimeter && <span>{Number(job.estimated_perimeter).toFixed(1)} {job.calibration_unit} edge</span>}
                         <small>Photo estimate · verify on site before ordering</small>
                       </div>}
-                      {job.status === "succeeded" && <GenerationOutput job={job} token={token} />}
+                      {job.status === "succeeded" && <MeasuredConcept job={job} token={token} />}
                       {job.status === "succeeded" && <MaterialEstimator
                         jobId={job.id}
                         token={token}
@@ -3820,28 +3823,6 @@ function DesignStudio({
       </section>
     </div>
   );
-}
-
-function GenerationOutput({ job, token }: { job: GenerationJob; token: string }) {
-  const [url, setUrl] = useState("");
-  useEffect(() => {
-    let active = true;
-    let objectUrl = "";
-    downloadAuthenticated(`/api/v1/generations/${job.id}/output`, token)
-      .then((blob) => {
-        objectUrl = URL.createObjectURL(blob);
-        if (active) setUrl(objectUrl);
-      })
-      .catch(() => undefined);
-    return () => {
-      active = false;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [job.id, token]);
-  if (!url) return <div className="capture-loading">Loading generated concept…</div>;
-  // Authenticated blob URLs cannot use the Next.js image optimizer.
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img className="generation-output" src={url} alt="Generated landscape concept" />;
 }
 
 function EditRecordModal({

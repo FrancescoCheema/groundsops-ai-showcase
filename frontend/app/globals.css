@@ -3660,3 +3660,73 @@ textarea:focus {
 .platform-invite-link { margin-top: 0.75rem; }
 .platform-invite-link input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem; }
 @media (max-width: 760px) { .platform-create-workspace { grid-template-columns: 1fr; } }
+
+/* ---- Price list ---- */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.price-list-settings h3 { display: flex; align-items: center; gap: 0.45rem; }
+.price-list-settings h3 svg { width: 1.05rem; height: 1.05rem; color: var(--forest); }
+.price-list-table { display: grid; gap: 0.35rem; }
+.price-list-row { display: grid; grid-template-columns: 5.5rem minmax(8rem, 1.2fr) 5.5rem 5.5rem minmax(6rem, 1fr); gap: 0.5rem; align-items: center; }
+.price-list-row.head { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.price-list-row input { width: 100%; min-height: 2.4rem; padding: 0.4rem 0.55rem; }
+.price-list-row .with-unit { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.25rem; }
+.price-list-row .with-unit small { color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
+.price-list-row .muted { color: var(--muted); text-align: center; }
+.price-list-defaults { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; margin-top: 0.4rem; }
+.price-list-defaults label { display: grid; gap: 0.3rem; font-size: 0.8rem; font-weight: 700; }
+@media (max-width: 640px) {
+  .price-list-row { grid-template-columns: 1fr 1fr; }
+  .price-list-row.head { display: none; }
+  .price-list-defaults { grid-template-columns: 1fr; }
+}
+
+/* ---- Estimator: price-list source note and clear breakdown ---- */
+.estimator-source { display: flex; gap: 0.5rem; align-items: flex-start; margin: 0.75rem 0 0; padding: 0.6rem 0.75rem; border-radius: 0.7rem; background: #eef8f1; color: var(--forest); font-size: 0.82rem; }
+.estimator-source.empty { background: #fff8e6; color: #6b4b00; }
+.estimator-source svg { width: 1rem; height: 1rem; flex-shrink: 0; margin-top: 0.1rem; }
+.estimate-breakdown { margin-top: 1rem; display: grid; gap: 0.85rem; }
+.estimate-measured { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.5rem; }
+.estimate-measured div { display: grid; gap: 0.15rem; padding: 0.7rem 0.85rem; border-radius: 0.75rem; background: #f3f7f3; border: 1px solid #e0e8e0; }
+.estimate-measured span { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.estimate-measured strong { font-size: 1.35rem; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.estimate-breakdown table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 0.9rem; }
+.estimate-breakdown th, .estimate-breakdown td { padding: 0.6rem 0.5rem; text-align: right; border-bottom: 1px solid #e4e9e4; vertical-align: top; }
+.estimate-breakdown thead th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 800; }
+.estimate-breakdown th:first-child { text-align: left; }
+.estimate-breakdown tbody th { font-weight: 700; }
+.estimate-breakdown td small, .estimate-breakdown th small { display: block; color: var(--muted); font-size: 0.75rem; font-weight: 500; }
+.estimate-breakdown tfoot th { text-align: right; font-weight: 600; color: var(--muted); }
+.estimate-breakdown tfoot tr:last-child th, .estimate-breakdown tfoot tr:last-child td { border-bottom: 0; }
+.estimate-grand-total th, .estimate-grand-total td { font-size: 1.15rem; font-weight: 800 !important; color: var(--ink) !important; border-top: 2px solid var(--ink); }
+.estimate-breakdown ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.3rem; font-size: 0.82rem; color: var(--muted); }
+.estimate-breakdown li { display: flex; align-items: center; gap: 0.4rem; }
+.estimate-breakdown li svg { width: 0.95rem; height: 0.95rem; color: var(--forest); }
+.estimate-breakdown > small { color: var(--muted); font-size: 0.78rem; }
+.estimate-breakdown .rate-inline { display: none; }
+.estimate-breakdown { min-width: 0; }
+@media (max-width: 640px) {
+  .estimate-breakdown .rate-col { display: none; }
+  .estimate-breakdown .rate-inline { display: block; }
+  .estimate-breakdown table { font-size: 0.85rem; }
+  .estimate-breakdown th, .estimate-breakdown td { padding: 0.5rem 0.3rem; }
+  .estimate-breakdown tfoot th { text-align: left; }
+  .estimate-grand-total th, .estimate-grand-total td { font-size: 1rem; }
+  .estimate-measured { grid-template-columns: 1fr 1fr; }
+  .estimate-measured strong { font-size: 1.1rem; }
+}
+
+/* ---- Measured concept: outlined area + measurement tiles ---- */
+.measured-concept { display: grid; gap: 0.75rem; margin: 0.75rem 0; }
+.measured-concept-frame { position: relative; }
+.measured-concept-frame canvas { display: block; width: 100%; height: auto; }
+.measured-concept-toggle { position: absolute; top: 0.6rem; right: 0.6rem; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.4rem 0.7rem; border: 0; border-radius: 999px; background: rgba(17, 30, 22, 0.82); color: #fff; font-size: 0.78rem; font-weight: 700; cursor: pointer; backdrop-filter: blur(6px); }
+.measured-concept-toggle:hover { background: rgba(17, 30, 22, 0.95); }
+.measured-concept-toggle svg { width: 0.9rem; height: 0.9rem; color: #ffd23f; }
+.measurement-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 0.5rem; }
+.measurement-tiles > div { display: grid; align-content: start; gap: 0.2rem; padding: 0.75rem 0.85rem; border-radius: 0.75rem; background: #f3f7f3; border: 1px solid #e0e8e0; }
+.measurement-tiles svg { width: 0.95rem; height: 0.95rem; color: var(--forest); }
+.measurement-tiles span { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.measurement-tiles strong { font-size: 1.4rem; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.measurement-tiles .measurement-method strong { font-size: 0.95rem; letter-spacing: 0; }
+.measurement-tiles small { color: var(--muted); font-size: 0.75rem; }
+.measurement-missing { margin: 0; padding: 0.6rem 0.75rem; border-radius: 0.7rem; background: #fff8e6; color: #6b4b00; font-size: 0.82rem; }

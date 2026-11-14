@@ -86,3 +86,36 @@ def test_retries_start_from_the_original_photo_and_keep_outside_pixels(
     result = Image.open(BytesIO(output.content)).convert("RGB")
     assert result.getpixel((2, 2)) == (120, 90, 60)
     assert result.getpixel((32, 32)) != (120, 90, 60)
+
+
+def test_generation_mask_is_served_only_to_its_company(client, create_identity, monkeypatch):
+    settings = get_settings()
+    monkeypatch.setattr(settings, "inference_provider", "mock")
+    _, headers = create_identity("Mask Owner")
+    _, other_headers = create_identity("Mask Stranger")
+    customer = client.post(
+        "/api/v1/customers", headers=headers, json={"name": "Mask Customer"}
+    ).json()
+    prop = client.post("/api/v1/properties", headers=headers,
+                       json={"name": "Yard", "customer_id": customer["id"]}).json()
+    design = client.post("/api/v1/design-projects", headers=headers,
+                         json={"name": "Mask Design", "property_id": prop["id"]}).json()
+    capture = client.post(
+        f"/api/v1/design-projects/{design['id']}/captures", headers=headers,
+        files={"file": ("site.png", _png(Image.new("RGB", (64, 64), (120, 90, 60))), "image/png")},
+    ).json()
+    mask = Image.new("L", (64, 64), 0)
+    ImageDraw.Draw(mask).rectangle((16, 16, 47, 47), fill=255)
+    job = client.post(
+        f"/api/v1/design-projects/{design['id']}/generations", headers=headers,
+        data={"capture_id": capture["id"], "prompt": "Lay fresh sod"},
+        files={"mask": ("mask.png", _png(mask), "image/png")},
+    ).json()
+
+    own = client.get(f"/api/v1/generations/{job['id']}/mask", headers=headers)
+    other = client.get(f"/api/v1/generations/{job['id']}/mask", headers=other_headers)
+
+    assert own.status_code == 200
+    assert own.headers["content-type"] == "image/png"
+    assert Image.open(BytesIO(own.content)).convert("L").getpixel((32, 32)) == 255
+    assert other.status_code == 404

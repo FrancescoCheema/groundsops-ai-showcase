@@ -547,3 +547,18 @@ export async function invoiceLogoBlob(token: string): Promise<Blob> {
   return response.blob();
 }
 
+
+export type PriceListMaterial = "sod" | "pavers" | "mulch" | "gravel" | "topsoil";
+export type PriceListItem = {
+  material_type: PriceListMaterial;
+  unit_price: string;
+  waste_percent: string;
+  depth?: string | null;
+  supplier?: string | null;
+};
+export type PriceList = {
+  items: PriceListItem[];
+  labour_rate: string;
+  delivery_cost: string;
+  tax_rate: string;
+};

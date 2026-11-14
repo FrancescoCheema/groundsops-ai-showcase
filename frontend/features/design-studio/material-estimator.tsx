@@ -1,8 +1,10 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { Calculator, ExternalLink, MapPin, PackageCheck } from "lucide-react";
-import { ApiError, GenerationMaterialEstimate, request } from "@/lib/api";
+import { Calculator, ExternalLink, MapPin, PackageCheck, Tags } from "lucide-react";
+import { materialLabels } from "@/features/price-list";
+import { formatMoney } from "@/features/shared/format";
+import { ApiError, GenerationMaterialEstimate, type PriceList, request } from "@/lib/api";
 
 type Material = GenerationMaterialEstimate["material_type"];
 type MeasurementUnit = GenerationMaterialEstimate["measurement_unit"];
@@ -68,6 +70,35 @@ export function MaterialEstimator({
   const [taxRate, setTaxRate] = useState("12");
   const [estimate, setEstimate] = useState<GenerationMaterialEstimate>();
   const [saving, setSaving] = useState(false);
+  const [priceList, setPriceList] = useState<PriceList>();
+  const [savedEstimateLoaded, setSavedEstimateLoaded] = useState(false);
+
+  // Fill a new estimate from the company's price list; a saved estimate keeps its own numbers.
+  function applyPriceList(list: PriceList, value: Material) {
+    const item = list.items.find((row) => row.material_type === value);
+    if (item) {
+      setUnitPrice(item.unit_price);
+      setWaste(item.waste_percent);
+      setDepth(item.depth || defaults[value].depth);
+    }
+    setLabourRate(list.labour_rate);
+    setDelivery(list.delivery_cost);
+    setTaxRate(list.tax_rate);
+  }
+
+  useEffect(() => {
+    let active = true;
+    request<PriceList>("/api/v1/price-list", token)
+      .then((list) => { if (active) setPriceList(list); })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, [token]);
+
+  useEffect(() => {
+    if (priceList && savedEstimateLoaded && !estimate) applyPriceList(priceList, material);
+    // Only when the price list or the saved-estimate check first arrives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priceList, savedEstimateLoaded]);
 
   useEffect(() => {
     let active = true;
@@ -77,8 +108,8 @@ export function MaterialEstimator({
         setEstimate(row);
         setMaterial(row.material_type);
         setUnit(row.measurement_unit);
-        setArea(row.measured_area);
-        setPerimeter(row.measured_perimeter);
+        setArea(toHundredths(row.measured_area));
+        setPerimeter(toHundredths(row.measured_perimeter));
         setWaste(row.waste_percent);
         setDepth(row.depth || "");
         setUnitPrice(row.unit_price);
@@ -90,7 +121,8 @@ export function MaterialEstimator({
       .catch((error) => {
         if (active && error instanceof Error && !(error instanceof ApiError && error.status === 404))
           onMessage(error.message);
-      });
+      })
+      .finally(() => { if (active) setSavedEstimateLoaded(true); });
     return () => { active = false; };
   }, [jobId, onMessage, token]);
 
@@ -99,6 +131,7 @@ export function MaterialEstimator({
     setWaste(defaults[value].waste);
     setDepth(defaults[value].depth);
     setLabourHours("");
+    if (priceList) applyPriceList(priceList, value);
   }
 
   async function calculate(event: FormEvent) {
@@ -138,9 +171,17 @@ export function MaterialEstimator({
   const volumeMaterial = material === "mulch" || material === "gravel" || material === "topsoil";
   const location = propertyLocation.trim() || "near me";
   const materialLabel = material === "topsoil" ? "topsoil" : material;
+  const priceItem = priceList?.items.find((row) => row.material_type === material);
+  const priceListEmpty = priceList ? priceList.items.every((row) => Number(row.unit_price) === 0) : false;
 
   return <details className="material-estimator">
     <summary><Calculator /> Material, labour and suppliers</summary>
+    <p className={priceListEmpty ? "estimator-source empty" : "estimator-source"}>
+      <Tags aria-hidden="true" />
+      {priceListEmpty
+        ? "Set up your price list in Settings and estimates will fill in your own costs automatically."
+        : `Prices from your price list${priceItem?.supplier ? ` · ${materialLabels[material].name} from ${priceItem.supplier}` : ""}. Adjust any number for this job.`}
+    </p>
     <form onSubmit={calculate}>
       <label>Material<select value={material} onChange={(event) => changeMaterial(event.target.value as Material)}>
         <option value="sod">Sod</option><option value="pavers">Pavers</option><option value="mulch">Mulch</option><option value="gravel">Gravel</option><option value="topsoil">Topsoil</option>
@@ -162,16 +203,48 @@ export function MaterialEstimator({
       <a href={mapsSearch(`${materialLabel} supplier ${location}`)} target="_blank" rel="noreferrer">Find {materialLabel} suppliers <ExternalLink /></a>
       <a href={mapsSearch(`landscape supply ${location}`)} target="_blank" rel="noreferrer">Find landscape supply stores <ExternalLink /></a>
     </div>
-    {estimate && <div className="estimate-result">
-      <div><span>Measured area</span><strong>{Number(estimate.measured_area).toFixed(1)} sq {estimate.measurement_unit}</strong></div>
-      <div><span>Order</span><strong>{estimate.order_quantity} {estimate.material_unit}</strong></div>
-      <div><span>Edging</span><strong>{estimate.edging_quantity} {estimate.measurement_unit}</strong></div>
-      <div><span>Labour</span><strong>{estimate.labour_hours} hours</strong></div>
-      <div><span>Material</span><strong>${estimate.material_cost}</strong></div>
-      <div><span>Labour</span><strong>${estimate.labour_cost}</strong></div>
-      <div className="estimate-total"><span>Estimated total</span><strong>${estimate.total} {estimate.currency}</strong></div>
-      <ul>{estimate.assumptions.map((item) => <li key={item}><PackageCheck />{item}</li>)}</ul>
-      <small>Planning estimate only. Verify dimensions, supplier coverage, site conditions, availability and taxes before quoting or ordering.</small>
-    </div>}
+    {estimate && <EstimateBreakdown estimate={estimate} supplier={priceItem?.supplier} />}
   </details>;
+}
+
+function EstimateBreakdown({ estimate, supplier }: { estimate: GenerationMaterialEstimate; supplier?: string | null }) {
+  const name = materialLabels[estimate.material_type].name;
+  const unitLabel = estimate.material_unit;
+  const qty = (value: string) => Number(value).toLocaleString("en-CA", { maximumFractionDigits: 2 });
+  return (
+    <div className="estimate-breakdown" aria-label="Estimate breakdown">
+      <div className="estimate-measured">
+        <div><span>Measured area</span><strong>{qty(estimate.measured_area)} sq {estimate.measurement_unit}</strong></div>
+        <div><span>Edge length</span><strong>{qty(estimate.edging_quantity)} {estimate.measurement_unit}</strong></div>
+        {estimate.depth && <div><span>Depth</span><strong>{qty(estimate.depth)} {estimate.measurement_unit === "m" ? "cm" : "in"}</strong></div>}
+      </div>
+      <table>
+        <thead><tr><th scope="col">Item</th><th scope="col">Quantity</th><th scope="col" className="rate-col">Rate</th><th scope="col">Amount</th></tr></thead>
+        <tbody>
+          <tr>
+            <th scope="row">{name}{supplier ? <small>{supplier}</small> : null}</th>
+            <td>{qty(estimate.order_quantity)} {unitLabel}<small>incl. {qty(estimate.waste_percent)}% waste</small><small className="rate-inline">at {formatMoney(estimate.unit_price)} / {unitLabel}</small></td>
+            <td className="rate-col">{formatMoney(estimate.unit_price)} / {unitLabel}</td>
+            <td>{formatMoney(estimate.material_cost)}</td>
+          </tr>
+          <tr>
+            <th scope="row">Labour</th>
+            <td>{qty(estimate.labour_hours)} h<small className="rate-inline">at {formatMoney(estimate.labour_rate)} / h</small></td>
+            <td className="rate-col">{formatMoney(estimate.labour_rate)} / h</td>
+            <td>{formatMoney(estimate.labour_cost)}</td>
+          </tr>
+          {Number(estimate.delivery_cost) > 0 && <tr>
+            <th scope="row">Delivery</th><td>1 trip</td><td className="rate-col">—</td><td>{formatMoney(estimate.delivery_cost)}</td>
+          </tr>}
+        </tbody>
+        <tfoot>
+          <tr><th scope="row" colSpan={2}>Subtotal</th><td className="rate-col" /><td>{formatMoney(estimate.subtotal)}</td></tr>
+          <tr><th scope="row" colSpan={2}>Tax ({qty(estimate.tax_rate)}%)</th><td className="rate-col" /><td>{formatMoney(estimate.tax_amount)}</td></tr>
+          <tr className="estimate-grand-total"><th scope="row" colSpan={2}>Estimated total</th><td className="rate-col" /><td>{formatMoney(estimate.total, estimate.currency)}</td></tr>
+        </tfoot>
+      </table>
+      <ul>{estimate.assumptions.map((item) => <li key={item}><PackageCheck />{item}</li>)}</ul>
+      <small>Planning estimate from a photo measurement. Confirm dimensions on site before quoting or ordering.</small>
+    </div>
+  );
 }

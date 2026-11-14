@@ -14,6 +14,7 @@ from groundsops.billing import router as billing_router
 from groundsops.config import get_settings
 from groundsops.db import engine
 from groundsops.observability import configure_logging, log_event
+from groundsops.price_list import router as price_list_router
 from groundsops.rate_limit import SlidingWindowRateLimiter
 from groundsops.storage import get_object_storage
 
@@ -35,6 +36,7 @@ app.add_middleware(
 )
 app.include_router(router)
 app.include_router(billing_router)
+app.include_router(price_list_router)
 
 
 @app.middleware("http")

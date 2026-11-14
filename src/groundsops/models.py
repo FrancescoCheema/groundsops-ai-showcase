@@ -208,6 +208,16 @@ class Organization(Base):
         String(100), nullable=True, unique=True, index=True
     )
     stripe_subscription_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # Company-wide defaults used to pre-fill material estimates.
+    estimate_labour_rate: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2), default=Decimal("0"), server_default="0"
+    )
+    estimate_delivery_cost: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2), default=Decimal("0"), server_default="0"
+    )
+    estimate_tax_rate: Mapped[Decimal] = mapped_column(
+        Numeric(6, 3), default=Decimal("12"), server_default="12"
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     properties: Mapped[list["Property"]] = relationship(back_populates="organization")
 
@@ -339,6 +349,26 @@ class Material(Base):
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     variants: Mapped[list["MaterialVariant"]] = relationship(back_populates="material")
+
+
+class PriceListItem(Base):
+    """A company's own cost for one material, used to pre-fill estimates."""
+
+    __tablename__ = "price_list_items"
+    __table_args__ = (UniqueConstraint("organization_id", "material_type"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    organization_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("organizations.id"), index=True
+    )
+    material_type: Mapped[str] = mapped_column(String(30))
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0"))
+    waste_percent: Mapped[Decimal] = mapped_column(Numeric(6, 2))
+    depth: Mapped[Decimal | None] = mapped_column(Numeric(8, 2), nullable=True)
+    supplier: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
 
 
 class MaterialVariant(Base):

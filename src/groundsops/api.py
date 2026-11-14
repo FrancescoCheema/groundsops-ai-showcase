@@ -2284,6 +2284,22 @@ def create_generation_review(
     return review
 
 
+@router.get("/generations/{job_id}/mask", response_class=Response)
+def get_generation_mask(job_id: str, principal: CurrentPrincipal, db: DbSession) -> Response:
+    """The black-and-white selection the measurement was taken from (white = selected)."""
+    job = _generation_for_tenant(job_id, principal.organization_id, db)
+    if not job.mask_storage_key:
+        raise HTTPException(status_code=404, detail="Generation mask not found")
+    return Response(
+        content=get_object_storage().get(job.mask_storage_key),
+        media_type="image/png",
+        headers={
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
 @router.get("/generations/{job_id}/output", response_class=Response)
 def get_generation_output(job_id: str, principal: CurrentPrincipal, db: DbSession) -> Response:
     job = _generation_for_tenant(job_id, principal.organization_id, db)
