@@ -10,7 +10,7 @@ def test_short_grass_prompts_expand_to_same_material_description():
         assert intent is not None
         assert intent.key == "grass"
         expanded = landscaping_edit_prompt(prompt)
-        assert "lush, healthy natural green sod" in expanded
+        assert "vibrant green sod" in expanded
         assert prompt in expanded
 
 

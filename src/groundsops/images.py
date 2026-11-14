@@ -120,3 +120,32 @@ def composite_edit(source: bytes, generated: bytes, mask: bytes) -> bytes:
     output = BytesIO()
     Image.composite(edited, original, alpha).save(output, format="PNG", optimize=True)
     return output.getvalue()
+
+
+def upscale_for_inpainting(
+    image: bytes, media_type: str, mask: bytes, min_long_side: int = 1024
+) -> tuple[bytes, str, bytes]:
+    """Enlarge small photos (and their mask) before inpainting.
+
+    FLUX Fill works at about one megapixel. Given a small photo, such as one saved from a
+    Google Business listing, it paints textures far too large for the scene (fist-sized
+    gravel, clumped grass). The result is scaled back down when composited.
+    Returns ``(image, media_type, mask)``; images already large enough are unchanged.
+    """
+    try:
+        with Image.open(BytesIO(image)) as source:
+            source.load()
+            original = source.convert("RGB")
+    except (UnidentifiedImageError, OSError):
+        return image, media_type, mask
+    long_side = max(original.size)
+    if long_side >= min_long_side:
+        return image, media_type, mask
+    scale = min_long_side / long_side
+    size = (round(original.width * scale), round(original.height * scale))
+    with Image.open(BytesIO(mask)) as source:
+        enlarged_mask = source.convert("L").resize(size, Image.Resampling.NEAREST)
+    image_out, mask_out = BytesIO(), BytesIO()
+    original.resize(size, Image.Resampling.LANCZOS).save(image_out, format="PNG")
+    enlarged_mask.save(mask_out, format="PNG")
+    return image_out.getvalue(), "image/png", mask_out.getvalue()

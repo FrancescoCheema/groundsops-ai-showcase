@@ -11,6 +11,7 @@ import httpx
 from PIL import Image
 
 from groundsops.config import Settings, get_settings
+from groundsops.images import upscale_for_inpainting
 from groundsops.material_intent import resolve_material_intent
 
 
@@ -40,7 +41,7 @@ class ImageGenerationProvider(Protocol):
 
 SCENE_MATCHING = (
     "Photorealistic landscaping photograph, matching the existing scene's daylight, "
-    "shadows, colour grading, camera angle, scale and perspective."
+    "shadows, camera angle, scale and perspective."
 )
 
 
@@ -94,9 +95,12 @@ class ReplicateImageGenerationProvider:
         self._sleep = sleep
 
     def _prediction_request(self, request: ImageGenerationRequest) -> tuple[str, dict]:
+        image, media_type, mask = upscale_for_inpainting(
+            request.image, request.image_media_type, request.mask
+        )
         model_input = {
-            "image": _data_uri(request.image, request.image_media_type),
-            "mask": _data_uri(request.mask, "image/png"),
+            "image": _data_uri(image, media_type),
+            "mask": _data_uri(mask, "image/png"),
             "prompt": landscaping_edit_prompt(request.prompt),
             "steps": 50,
             "guidance": self.settings.replicate_guidance,

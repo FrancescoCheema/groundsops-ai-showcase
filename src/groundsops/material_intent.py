@@ -16,8 +16,9 @@ _INTENTS = (
         re.compile(r"\b(grass|sod|lawn|turf)\b", re.IGNORECASE),
         MaterialIntent(
             "grass",
-            "A freshly laid lawn of lush, healthy natural green sod: dense green grass "
-            "blades with subtle natural colour variation, neatly edged.",
+            "A freshly laid lawn of lush, well-watered, vibrant green sod: a continuous "
+            "carpet of short, dense, evenly mown grass with subtle natural colour "
+            "variation, covering the whole area.",
         ),
     ),
     (
@@ -25,7 +26,8 @@ _INTENTS = (
         MaterialIntent(
             "pavers",
             "Professionally installed interlocking concrete pavers with tight, realistic "
-            "joints, consistent scale and perspective-correct rows, cleanly cut at the edges.",
+            "joints, consistent real-world scale and perspective-correct rows, laid flush "
+            "with the surrounding ground.",
         ),
     ),
     (
@@ -40,8 +42,9 @@ _INTENTS = (
         re.compile(r"\b(gravel|river rock|pea gravel|crushed rock)\b", re.IGNORECASE),
         MaterialIntent(
             "gravel",
-            "A neatly raked bed of landscaping gravel with realistic individual stones, "
-            "consistent grading and natural depth.",
+            "A neatly raked bed of grey crushed landscaping gravel: small angular stones "
+            "about 2 cm across, shown at true scale for the camera distance, with natural "
+            "colour variation and depth.",
         ),
     ),
 )
