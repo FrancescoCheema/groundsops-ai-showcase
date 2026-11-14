@@ -83,7 +83,7 @@ Material (including waste), labour, delivery and tax come from each company's ow
 ### Private company file vault
 
 <p align="center">
-  <img src="docs/assets/file-vault.png" alt="GroundsOps private company file vault" width="100%">
+  <img src="docs/assets/company-file-vault.png" alt="GroundsOps private company file vault" width="100%">
 </p>
 
 ## Technology
