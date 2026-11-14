@@ -599,6 +599,10 @@ class GenerationJobRead(BaseModel):
     estimated_area: Decimal | None
     estimated_perimeter: Decimal | None
     measurement_confidence: str | None
+    site_measured_area: Decimal | None = None
+    site_measured_perimeter: Decimal | None = None
+    site_measured_at: datetime | None = None
+    site_measurement_notes: str | None = None
     latency_ms: int | None
     estimated_cost_usd: Decimal | None
     error_message: str | None

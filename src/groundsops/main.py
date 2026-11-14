@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
+from groundsops.accuracy import router as accuracy_router
 from groundsops.api import router
 from groundsops.billing import router as billing_router
 from groundsops.config import get_settings
@@ -37,6 +38,7 @@ app.add_middleware(
 app.include_router(router)
 app.include_router(billing_router)
 app.include_router(price_list_router)
+app.include_router(accuracy_router)
 
 
 @app.middleware("http")

@@ -3761,3 +3761,47 @@ textarea:focus {
 .company-contact-grid .full-field { grid-column: 1 / -1; }
 .company-contact-grid textarea { resize: vertical; font: inherit; }
 @media (max-width: 560px) { .company-contact-grid { grid-template-columns: 1fr; } }
+
+/* ---- Tape check and field accuracy ---- */
+.tape-check { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; padding: .8rem .9rem; border-radius: 12px; border: 1px dashed #c9d8cd; background: #fbfdfb; }
+.tape-check label { display: grid; gap: .25rem; font-size: .76rem; font-weight: 800; color: var(--ink); }
+.tape-check input { min-width: 0; padding: .5rem .6rem; border: 1px solid #c8d4cb; border-radius: 9px; background: #fff; font: inherit; }
+.tape-check-intro { grid-column: 1 / -1; display: flex; gap: .5rem; align-items: flex-start; }
+.tape-check-intro svg { width: 1rem; height: 1rem; margin-top: .15rem; color: var(--forest); flex-shrink: 0; }
+.tape-check-intro div, .tape-check.result div { display: grid; gap: .1rem; }
+.tape-check strong { font-size: .88rem; color: var(--ink); }
+.tape-check span { font-size: .78rem; color: var(--muted); line-height: 1.4; }
+.tape-check .tape-notes { grid-column: 1 / -1; }
+.tape-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: .5rem; }
+.tape-check.result { display: flex; align-items: center; gap: .6rem; border-style: solid; }
+.tape-check.result > div { flex: 1; }
+.tape-check.result > svg { width: 1.15rem; height: 1.15rem; flex-shrink: 0; }
+.tape-check.result.good { background: #eef8f1; border-color: #bfe0c9; }
+.tape-check.result.good > svg { color: #1f9d62; }
+.tape-check.result.fair { background: #fff8e6; border-color: #f1d38a; }
+.tape-check.result.fair > svg { color: #b07800; }
+.tape-check.result.poor { background: #fdeeee; border-color: #f0c2c2; }
+.tape-check.result.poor > svg { color: #c0392b; }
+.accuracy-card { margin-top: 1.25rem; padding: 1.2rem 1.3rem; border-radius: 22px; background: #fff; border: 1px solid var(--line); display: grid; gap: .9rem; }
+.accuracy-card .section-heading > svg { width: 1.4rem; height: 1.4rem; color: var(--forest); }
+.accuracy-empty { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.5; max-width: 60rem; }
+.accuracy-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .6rem; }
+.accuracy-stats > div { display: grid; gap: .15rem; padding: .8rem .9rem; border-radius: 14px; background: #f3f7f3; border: 1px solid #e0e8e0; }
+.accuracy-stats span { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.accuracy-stats strong { font-size: 1.5rem; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.accuracy-stats small { color: var(--muted); font-size: .75rem; }
+.accuracy-methods { display: flex; flex-wrap: wrap; gap: .4rem .9rem; font-size: .82rem; color: var(--muted); }
+.accuracy-table { width: 100%; border-collapse: collapse; font-size: .88rem; font-variant-numeric: tabular-nums; }
+.accuracy-table th, .accuracy-table td { padding: .55rem .5rem; border-bottom: 1px solid #e4e9e4; text-align: right; vertical-align: top; }
+.accuracy-table th:first-child, .accuracy-table th:nth-child(2), .accuracy-table td:nth-child(2) { text-align: left; }
+.accuracy-table thead th { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.accuracy-table tbody th button { padding: 0; border: 0; background: none; font: inherit; font-weight: 700; color: var(--ink); cursor: pointer; text-align: left; }
+.accuracy-table small { display: block; color: var(--muted); font-size: .74rem; font-weight: 500; }
+.accuracy-pill { display: inline-block; padding: .15rem .5rem; border-radius: 999px; font-weight: 800; font-size: .8rem; }
+.accuracy-pill.good { background: #e3f5ea; color: #17784a; }
+.accuracy-pill.fair { background: #fff1cc; color: #8a5d00; }
+.accuracy-pill.poor { background: #fbe0e0; color: #a12b20; }
+@media (max-width: 640px) {
+  .tape-check { grid-template-columns: 1fr; }
+  .accuracy-table thead th:nth-child(2), .accuracy-table tbody td:nth-child(2) { display: none; }
+}

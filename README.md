@@ -169,6 +169,7 @@ See the [operations runbook](docs/OBSERVABILITY.md) and [billing setup](docs/BIL
 - [Privacy notice template](PRIVACY.md)
 - [Terms template](TERMS.md)
 - [Support policy](SUPPORT.md)
+- [Field accuracy test: photo measurement vs. tape measure](docs/FIELD_ACCURACY_TEST.md)
 - [Data retention](docs/DATA_RETENTION.md)
 - [Recovery runbook](docs/RECOVERY.md)
 - [Controlled beta runbook](docs/BETA_RUNBOOK.md)

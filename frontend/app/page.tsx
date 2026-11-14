@@ -66,6 +66,7 @@ import { QuoteBuilder } from "@/features/quotes/quote-builder";
 import { loadWorkspaceSnapshot } from "@/features/shared/workspace-query";
 import { BillingBanner, BillingSettings, type BillingState, useBilling } from "@/features/billing";
 import { PriceListSettings } from "@/features/price-list";
+import { MeasurementAccuracy } from "@/features/accuracy";
 import { type View, workspaceTranslations } from "@/features/navigation/workspace-config";
 import { defaultOverviewPreferences, normalizeOverviewPreferences, type OverviewPreferences, type OverviewWidget } from "@/features/settings";
 import type { InvoiceSection } from "@/features/invoices/types";
@@ -1009,6 +1010,7 @@ export default function Home() {
           />
         )}
         {view === "ai-quality" && managesOperations && (
+          <>
           <AIQualityDashboard
             metrics={generationMetrics}
             onOpenDesign={(id) => {
@@ -1016,6 +1018,14 @@ export default function Home() {
               setView("designs");
             }}
           />
+            <MeasurementAccuracy
+              token={token}
+              onOpenDesign={(id) => {
+                setSelectedDesign(id);
+                setView("designs");
+              }}
+            />
+          </>
         )}
         {view === "jobs" && <JobMap properties={properties} workOrders={workOrders} users={organizationUsers} token={token} refresh={() => load(token)} canManage={managesOperations} />}
         {view === "files" && <FileVault files={vaultFiles} token={token} refresh={() => load(token)} userId={currentUser?.id || ""} canManage={managesOperations} />}

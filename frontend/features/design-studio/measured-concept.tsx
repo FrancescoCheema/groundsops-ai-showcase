@@ -4,6 +4,7 @@ import { Ruler, ScanLine, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { downloadAuthenticated, type GenerationJob } from "@/lib/api";
+import { TapeCheck } from "@/features/accuracy";
 
 const OUTLINE = "#ffd23f";
 
@@ -161,6 +162,8 @@ export function MeasuredConcept({ job, token }: { job: GenerationJob; token: str
       <div><span><Square />Measured area</span><strong>{areaLabel}</strong></div>
       {perimeter !== null && <div><span><Ruler />Edge length</span><strong>{formatNumber(perimeter)} {unit}</strong></div>}
       <div className="measurement-method"><span>How it was measured</span><strong>{method}</strong><small>Photo estimate, so confirm on site before ordering materials.</small></div>
-    </div> : <p className="measurement-missing">No measurement for this concept. Draw a reference line of known length on the photo before generating to get the area and edge length.</p>}
+    </div> : null}
+    {measured && <TapeCheck job={job} token={token} />}
+    {!measured ? <p className="measurement-missing">No measurement for this concept. Before generating, lay a sheet of paper on the ground and use Known object (or draw a line of known length) to get the area and edge length.</p> : null}
   </div>;
 }

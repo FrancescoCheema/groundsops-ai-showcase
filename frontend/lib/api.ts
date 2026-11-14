@@ -158,6 +158,10 @@ export type GenerationJob = {
   estimated_area?: string | null;
   estimated_perimeter?: string | null;
   measurement_confidence?: "uncalibrated" | "photo_estimate" | null;
+  site_measured_area?: string | null;
+  site_measured_perimeter?: string | null;
+  site_measured_at?: string | null;
+  site_measurement_notes?: string | null;
   latency_ms?: number | null;
   estimated_cost_usd?: string | null;
   error_message?: string | null;
@@ -565,4 +569,34 @@ export type PriceList = {
   labour_rate: string;
   delivery_cost: string;
   tax_rate: string;
+};
+
+export type SiteMeasurement = {
+  job_id: string;
+  unit: string;
+  estimated_area: string;
+  site_area: string;
+  area_error_percent: number;
+  estimated_perimeter?: string | null;
+  site_perimeter?: string | null;
+  perimeter_error_percent?: number | null;
+  measured_at: string;
+  notes?: string | null;
+};
+export type AccuracyCheck = SiteMeasurement & {
+  design_project_id: string;
+  design_name: string;
+  method: string;
+  reference?: string | null;
+};
+export type MeasurementAccuracyReport = {
+  summary: {
+    count: number;
+    median_abs_error_percent: number | null;
+    mean_abs_error_percent: number | null;
+    within_5_percent: number;
+    within_10_percent: number;
+    by_method: { method: string; count: number; median_abs_error_percent: number; within_5_percent: number; within_10_percent: number }[];
+  };
+  checks: AccuracyCheck[];
 };

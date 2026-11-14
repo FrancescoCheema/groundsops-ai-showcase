@@ -464,6 +464,15 @@ class GenerationJob(Base):
     estimated_area: Mapped[Decimal | None] = mapped_column(Numeric(14, 4), nullable=True)
     estimated_perimeter: Mapped[Decimal | None] = mapped_column(Numeric(14, 4), nullable=True)
     measurement_confidence: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    # Tape-measured on site, in calibration_unit, to check the photo measurement.
+    site_measured_area: Mapped[Decimal | None] = mapped_column(Numeric(14, 4), nullable=True)
+    site_measured_perimeter: Mapped[Decimal | None] = mapped_column(
+        Numeric(14, 4), nullable=True
+    )
+    site_measured_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    site_measurement_notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
     output_storage_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     output_media_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     provider_prediction_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
