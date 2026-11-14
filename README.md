@@ -12,7 +12,7 @@ GroundsOps AI is a production-oriented landscaping operations platform that turn
 Paint the area to change, generate the concept, and only the selected ground changes. The calibrated area (214 sq ft) carries straight into the material estimate.
 
 <p align="center">
-  <img src="docs/assets/demo-preview.gif" alt="Painting a bare-soil strip, generating an AI concept, and the finished lawn with its measured area" width="720">
+  <img src="docs/assets/demo-preview-v2.gif" alt="Painting a bare-soil backyard, then the AI lawn concept with its measured area outlined" width="720">
 </p>
 
 <p align="center">
