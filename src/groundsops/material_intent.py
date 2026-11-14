@@ -16,9 +16,10 @@ _INTENTS = (
         re.compile(r"\b(grass|sod|lawn|turf)\b", re.IGNORECASE),
         MaterialIntent(
             "grass",
-            "A freshly laid lawn of lush, well-watered, vibrant green sod: a continuous "
-            "carpet of short, dense, evenly mown grass with subtle natural colour "
-            "variation, covering the whole area.",
+            "An established, lush, well-watered green lawn growing across the entire "
+            "area from edge to edge: short, dense, evenly mown natural grass with "
+            "subtle colour variation and soft natural shading, blending into the "
+            "surrounding ground.",
         ),
     ),
     (

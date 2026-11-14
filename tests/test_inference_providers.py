@@ -206,3 +206,37 @@ def test_replicate_provider_gives_up_after_bounded_rate_limit_retries():
 
     assert len(sleeps) == 3
     assert sum(1 for call in calls if call.method == "POST") == 4
+
+
+def test_replicate_provider_retries_brief_gateway_outages():
+    calls: list[httpx.Request] = []
+    sleeps: list[float] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        posts = sum(1 for call in calls if call.method == "POST")
+        if request.method == "POST" and posts == 1:
+            return httpx.Response(502, text="Bad Gateway")
+        return _rate_limited_handler(0, [])(request)
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        result = _rate_limit_provider(client, sleeps).generate(_edit_request())
+
+    assert result.prediction_id == "prediction-2"
+    assert sleeps == [3.0]
+
+
+def test_replicate_provider_does_not_retry_outages_forever():
+    sleeps: list[float] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, text="Service Unavailable")
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        try:
+            _rate_limit_provider(client, sleeps).generate(_edit_request())
+        except httpx.HTTPStatusError as exc:
+            assert exc.response.status_code == 503
+        else:
+            raise AssertionError("expected the outage to surface")
+    assert sleeps == [3.0, 6.0]

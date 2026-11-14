@@ -67,6 +67,9 @@ def _data_uri(data: bytes, media_type: str) -> str:
 
 RATE_LIMIT_MAX_ATTEMPTS = 4
 RATE_LIMIT_MAX_WAIT_SECONDS = 30.0
+GATEWAY_ERRORS = {502, 503, 504}
+GATEWAY_RETRIES = 2
+GATEWAY_RETRY_SECONDS = 3.0
 
 
 def _retry_after_seconds(response: httpx.Response) -> float:
@@ -123,17 +126,26 @@ class ReplicateImageGenerationProvider:
     def _create_prediction(
         self, client: httpx.Client, endpoint: str, headers: dict, payload: dict
     ) -> httpx.Response:
-        """Submit a prediction, waiting out Replicate rate limits.
+        """Submit a prediction, waiting out rate limits and brief gateway outages.
 
         A 429 means the prediction was not created (and not billed), so it is
-        safe to wait for ``Retry-After`` and submit again.
+        safe to wait for ``Retry-After`` and submit again. A 502/503/504 comes from
+        Replicate's edge before the request reaches the model, so it is retried a
+        couple of times with a short pause instead of failing the customer's job.
         """
+        outages = 0
         for attempt in range(1, RATE_LIMIT_MAX_ATTEMPTS + 1):
             response = client.post(endpoint, headers=headers, json=payload)
-            if response.status_code != 429 or attempt == RATE_LIMIT_MAX_ATTEMPTS:
-                response.raise_for_status()
-                return response
-            self._sleep(_retry_after_seconds(response))
+            last = attempt == RATE_LIMIT_MAX_ATTEMPTS
+            if response.status_code == 429 and not last:
+                self._sleep(_retry_after_seconds(response))
+                continue
+            if response.status_code in GATEWAY_ERRORS and outages < GATEWAY_RETRIES and not last:
+                outages += 1
+                self._sleep(GATEWAY_RETRY_SECONDS * outages)
+                continue
+            response.raise_for_status()
+            return response
         raise RuntimeError("unreachable")
 
     def generate(self, request: ImageGenerationRequest) -> ImageGenerationResult:
