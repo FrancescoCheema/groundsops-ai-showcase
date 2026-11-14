@@ -122,3 +122,44 @@ def test_pdf_renders_logo_and_before_after_photos():
     assert pdf.count(b"/Subtype /Image") >= 3
     # Photos are downscaled for email, so the file stays small.
     assert len(pdf) < 600_000
+
+
+def test_company_contact_details_are_saved_and_used_on_quotes(client, create_identity, monkeypatch):
+    import groundsops.api as api_module
+
+    _, headers = create_identity("Contact Landscaping")
+    saved = client.put(
+        "/api/v1/organization",
+        headers=headers,
+        json={
+            "name": "Contact Landscaping",
+            "contact_email": " office@contact.example ",
+            "contact_phone": "604-555-0199",
+            "contact_address": "123 Example St, Surrey, BC",
+        },
+    )
+    assert saved.status_code == 200
+    assert saved.json()["contact_email"] == "office@contact.example"
+
+    # Renaming without contact fields keeps them; an empty string clears one.
+    renamed = client.put(
+        "/api/v1/organization",
+        headers=headers,
+        json={"name": "Contact Landscaping Ltd", "contact_phone": ""},
+    ).json()
+    assert renamed["contact_email"] == "office@contact.example"
+    assert renamed["contact_phone"] is None
+
+    captured = {}
+    original = api_module.render_quote_pdf
+
+    def capture(document):
+        captured["company"] = document.company
+        return original(document)
+
+    monkeypatch.setattr(api_module, "render_quote_pdf", capture)
+    quote = _quote(client, headers, "Contact Customer")
+    assert client.get(f"/api/v1/quotes/{quote['id']}/pdf", headers=headers).status_code == 200
+    assert captured["company"].name == "Contact Landscaping Ltd"
+    assert captured["company"].email == "office@contact.example"
+    assert captured["company"].address == "123 Example St, Surrey, BC"

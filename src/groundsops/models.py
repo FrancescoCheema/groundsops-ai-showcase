@@ -197,6 +197,9 @@ class Organization(Base):
     logo_media_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     invoice_logo_storage_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     invoice_logo_media_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    contact_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    contact_phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    contact_address: Mapped[str | None] = mapped_column(String(500), nullable=True)
     subscription_status: Mapped[str] = mapped_column(
         String(30), default="trialing", server_default="trialing"
     )

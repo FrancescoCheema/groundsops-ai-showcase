@@ -847,6 +847,10 @@ def update_current_organization(
     if organization is None:
         raise HTTPException(status_code=404, detail="Organization not found")
     organization.name = payload.name
+    for field in ("contact_email", "contact_phone", "contact_address"):
+        if field in payload.model_fields_set:
+            value = getattr(payload, field)
+            setattr(organization, field, (value or "").strip() or None)
     db.commit()
     db.refresh(organization)
     return organization
@@ -2631,7 +2635,8 @@ def get_quote_pdf(quote_id: str, principal: CurrentPrincipal, db: DbSession) -> 
             return None
 
     capture = db.get(SiteCapture, job.capture_id) if job else None
-    # Company contact details are entered on invoices; use the most recent ones.
+    # Contact details come from Settings > Company profile; older workspaces that only
+    # entered them on invoices fall back to the most recent invoice.
     contact = db.scalar(
         select(Invoice)
         .where(Invoice.organization_id == principal.organization_id)
@@ -2656,9 +2661,12 @@ def get_quote_pdf(quote_id: str, principal: CurrentPrincipal, db: DbSession) -> 
         assumptions=quote.assumptions,
         company=Party(
             name=organization.name if organization else "",
-            email=contact.company_email if contact else None,
-            phone=contact.company_phone if contact else None,
-            address=contact.company_address if contact else None,
+            email=(organization.contact_email if organization else None)
+            or (contact.company_email if contact else None),
+            phone=(organization.contact_phone if organization else None)
+            or (contact.company_phone if contact else None),
+            address=(organization.contact_address if organization else None)
+            or (contact.company_address if contact else None),
         ),
         customer=(
             Party(customer.name, customer.email, customer.phone, customer.address)

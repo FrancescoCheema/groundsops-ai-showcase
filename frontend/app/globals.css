@@ -3754,3 +3754,10 @@ textarea:focus {
 .quote-one-click > div { display: grid; gap: .2rem; flex: 1 1 18rem; }
 .quote-one-click strong { font-size: .95rem; color: var(--ink); }
 .quote-one-click span { font-size: .8rem; color: var(--muted); line-height: 1.4; }
+
+/* ---- Company contact details in Settings ---- */
+.company-contact-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; margin-top: .4rem; }
+.company-contact-grid label { display: grid; gap: .3rem; }
+.company-contact-grid .full-field { grid-column: 1 / -1; }
+.company-contact-grid textarea { resize: vertical; font: inherit; }
+@media (max-width: 560px) { .company-contact-grid { grid-template-columns: 1fr; } }

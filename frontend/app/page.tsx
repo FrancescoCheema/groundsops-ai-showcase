@@ -1458,6 +1458,9 @@ function SettingsPanel({
   saved: (next: OverviewPreferences) => Promise<void>;
 }) {
   const [name, setName] = useState(organization?.name || "");
+  const [contactEmail, setContactEmail] = useState(organization?.contact_email || "");
+  const [contactPhone, setContactPhone] = useState(organization?.contact_phone || "");
+  const [contactAddress, setContactAddress] = useState(organization?.contact_address || "");
   const [nextPreferences, setNextPreferences] = useState(preferences);
   const [secret, setSecret] = useState("");
   const [mfaQrCode, setMfaQrCode] = useState("");
@@ -1542,7 +1545,12 @@ function SettingsPanel({
       if (role === "admin" || role === "manager") {
         await request("/api/v1/organization", token, {
           method: "PUT",
-          body: JSON.stringify({ name }),
+          body: JSON.stringify({
+            name,
+            contact_email: contactEmail,
+            contact_phone: contactPhone,
+            contact_address: contactAddress,
+          }),
         });
       }
       await saved(nextPreferences);
@@ -1629,6 +1637,21 @@ function SettingsPanel({
               onChange={(event) => setName(event.target.value)}
             />
           </label>
+          <p className="settings-note">Shown on quotes and new invoices.</p>
+          <div className="company-contact-grid">
+            <label>
+              Email
+              <input type="email" value={contactEmail} maxLength={320} placeholder="office@company.com" onChange={(event) => setContactEmail(event.target.value)} />
+            </label>
+            <label>
+              Phone
+              <input type="tel" value={contactPhone} maxLength={40} placeholder="604-555-0100" onChange={(event) => setContactPhone(event.target.value)} />
+            </label>
+            <label className="full-field">
+              Address
+              <textarea rows={2} value={contactAddress} maxLength={500} placeholder="Street, city, province, postal code" onChange={(event) => setContactAddress(event.target.value)} />
+            </label>
+          </div>
         </div>}
         <BillingSettings billing={billing} token={token} />
         {(role === "admin" || role === "manager") && <PriceListSettings token={token} canEdit />}
@@ -2182,9 +2205,9 @@ function InvoicesView({
   const [recipientEmail, setRecipientEmail] = useState(customers[0]?.email || "");
   const [recipientPhone, setRecipientPhone] = useState(customers[0]?.phone || "");
   const [recipientAddress, setRecipientAddress] = useState(customers[0]?.address || "");
-  const [companyEmail, setCompanyEmail] = useState("");
-  const [companyPhone, setCompanyPhone] = useState("");
-  const [companyAddress, setCompanyAddress] = useState("");
+  const [companyEmail, setCompanyEmail] = useState(organization?.contact_email || "");
+  const [companyPhone, setCompanyPhone] = useState(organization?.contact_phone || "");
+  const [companyAddress, setCompanyAddress] = useState(organization?.contact_address || "");
   const [gstRate, setGstRate] = useState("5");
   const [pstRate, setPstRate] = useState("7");
   const [items, setItems] = useState<InvoiceItem[]>([
@@ -2286,9 +2309,9 @@ function InvoicesView({
     setRecipientEmail(first?.email || "");
     setRecipientPhone(first?.phone || "");
     setRecipientAddress(first?.address || "");
-    setCompanyEmail("");
-    setCompanyPhone("");
-    setCompanyAddress("");
+    setCompanyEmail(organization?.contact_email || "");
+    setCompanyPhone(organization?.contact_phone || "");
+    setCompanyAddress(organization?.contact_address || "");
     setGstRate("5");
     setPstRate("7");
     setSubject("Landscaping services");

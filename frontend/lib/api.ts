@@ -10,6 +10,9 @@ export type Organization = {
   name: string;
   logo_media_type?: string | null;
   invoice_logo_media_type?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  contact_address?: string | null;
   created_at: string;
 };
 export type Property = {

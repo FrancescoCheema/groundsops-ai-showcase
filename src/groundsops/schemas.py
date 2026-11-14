@@ -26,11 +26,18 @@ class OrganizationRead(BaseModel):
     name: str
     logo_media_type: str | None
     invoice_logo_media_type: str | None
+    contact_email: str | None = None
+    contact_phone: str | None = None
+    contact_address: str | None = None
     created_at: datetime
 
 
 class OrganizationUpdate(BaseModel):
     name: str = Field(min_length=2, max_length=200)
+    # Omitted fields keep their current value; an empty string clears one.
+    contact_email: str | None = Field(default=None, max_length=320)
+    contact_phone: str | None = Field(default=None, max_length=40)
+    contact_address: str | None = Field(default=None, max_length=500)
 
 
 class DevelopmentTokenRequest(BaseModel):
