@@ -96,7 +96,7 @@ Material (including waste), labour, delivery and tax come from each company's ow
 | AI | Replicate provider interface, FLUX Fill Pro, deterministic mock provider |
 | Identity | Amazon Cognito, OIDC/JWT, tenant RBAC, optional TOTP MFA |
 | Billing | Stripe Checkout, customer portal, signed webhooks, trial and read-only lockout |
-| Delivery | Docker, Docker Compose, Caddy, GitHub Actions, AWS Lightsail |
+| Delivery | Terraform, Docker, Docker Compose, Caddy, GitHub Actions, AWS Lightsail, Route 53 |
 | Quality | Pytest, Ruff, Playwright, npm audit, pip-audit |
 | Security | Gitleaks, Trivy, private storage, signed URLs, rate limiting |
 | Operations | JSON request logs, readiness checks, systemd monitoring, AWS alarms |
@@ -110,6 +110,10 @@ is ever held hostage. See [docs/BILLING.md](docs/BILLING.md) for the lifecycle a
 
 ## Architecture and reliability
 
+- Infrastructure is code: Terraform manages the Lightsail servers and static IPs, Route 53 DNS for each
+  environment (staging, production, demo on `groundsopsai.ca`), Cognito, private S3 buckets and budget alerts.
+  Plans are reviewed before every apply, and each environment has its own Terraform workspace.
+- Caddy serves every environment over HTTPS with automatically issued and renewed certificates.
 - Organization-scoped access controls isolate tenant data.
 - Site photos and generated concepts remain private and are delivered with short-lived signed URLs.
 - AI generations record provider, model, latency, estimated cost, evaluation results and reviewer decisions.
