@@ -3,7 +3,9 @@ resource "aws_lightsail_instance" "staging" {
   availability_zone = var.availability_zone
   blueprint_id      = "ubuntu_24_04"
   bundle_id         = var.bundle_id
-  user_data         = file("${path.module}/cloud-init.sh")
+  # Normalise line endings: a Windows checkout turns LF into CRLF, which would otherwise
+  # look like a different script and force Terraform to replace the instance.
+  user_data = replace(file("${path.module}/cloud-init.sh"), "\r\n", "\n")
 
   add_on {
     type          = "AutoSnapshot"
