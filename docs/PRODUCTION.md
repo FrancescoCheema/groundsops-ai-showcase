@@ -15,7 +15,7 @@ for dir in infra/cognito infra/storage infra/lightsail; do
 done
 ```
 
-Point `app.<your-domain>` (A record) at the production static IP.
+Point `app.groundsopsai.ca` at the production static IP: add `-var "domain_name=groundsopsai.ca" -var "hostname=app"` to the Lightsail plan so Terraform creates the record (see [DOMAIN.md](DOMAIN.md)).
 
 ## 2. Prepare the server
 

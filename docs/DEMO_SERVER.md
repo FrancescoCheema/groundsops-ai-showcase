@@ -16,7 +16,7 @@ server must still hold nothing except demo data. Never point it at staging or pr
 (cd infra/storage && terraform workspace new demo && terraform apply -var "environment=demo")
 ```
 
-2. Point `demo.<your-domain>` at the static IP and prepare the server as in
+2. Point `demo.groundsopsai.ca` at the static IP (add `-var "domain_name=groundsopsai.ca" -var "hostname=demo"` to the Lightsail plan; see [DOMAIN.md](DOMAIN.md)) and prepare the server as in
    [LIGHTSAIL_STAGING.md](LIGHTSAIL_STAGING.md), using `.env.demo` (copy `.env.demo.example`).
 3. Start the stack with the demo override and seed the workspace:
 

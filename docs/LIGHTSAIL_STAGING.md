@@ -91,6 +91,8 @@ This action starts AWS billing. Keep the Terraform state private and backed up.
 
 ## 4. Point a domain at the static IP
 
+With a Route 53 domain, set `domain_name` and `hostname` in `terraform.tfvars` and Terraform creates the record; see [DOMAIN.md](DOMAIN.md). With another DNS provider:
+
 Create an `A` record with the DNS provider:
 
 ```text

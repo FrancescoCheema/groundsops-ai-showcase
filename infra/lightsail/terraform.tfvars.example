@@ -5,3 +5,7 @@ bundle_id         = "small_3_0"
 ssh_allowed_cidrs = ["203.0.113.10/32"]
 billing_email     = "your-email@example.com"
 monthly_budget_usd = 35
+
+# Optional: create <hostname>.<domain_name> in the domain's Route 53 hosted zone.
+# domain_name = "groundsopsai.ca"
+# hostname    = "staging"
