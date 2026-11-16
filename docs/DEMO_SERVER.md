@@ -38,3 +38,19 @@ sudo systemctl enable --now groundsops-demo-reset.timer
 ```
 
 5. Add the link to the README's **Live demo** section.
+
+## Updating the demo
+
+The demo has no deploy workflow. To ship a new version, SSH to the demo server (not staging:
+`ls /opt/groundsops/app/.env.demo` must find the file) and run:
+
+```bash
+cd /opt/groundsops/app && git pull
+export GROUNDSOPS_ENV_FILE=.env.demo
+compose="docker compose --env-file .env.demo -f docker-compose.staging.yml -f docker-compose.demo.yml"
+$compose up -d --build api web
+$compose run --rm api alembic upgrade head
+./scripts/reset-demo-server.sh
+```
+
+The reset wipes the demo workspace (including anything visitors created) and re-seeds it.
