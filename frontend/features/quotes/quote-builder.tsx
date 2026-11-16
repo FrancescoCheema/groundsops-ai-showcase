@@ -55,17 +55,29 @@ export function QuoteBuilder({
       .then((records) => setUsers(records.filter((record) => record.active)))
       .catch(() => undefined);
     void request<GenerationMaterialEstimate>(`/api/v1/generations/${jobId}/material-estimate`, token)
-      .then((record) => {
-        setEstimate(record);
-        setItems([
-          { description: `${record.material_type.charAt(0).toUpperCase()}${record.material_type.slice(1)} materials`, category: "material", quantity: record.order_quantity, unit: record.material_unit, unit_price: record.unit_price },
-          { description: "Installation labour", category: "labour", quantity: record.labour_hours, unit: "hour", unit_price: record.labour_rate },
-          ...(Number(record.delivery_cost) > 0 ? [{ description: "Delivery", category: "delivery" as const, quantity: "1", unit: "delivery", unit_price: record.delivery_cost }] : []),
-        ]);
-        setTax(record.tax_rate);
-      })
+      .then(applyEstimate)
       .catch(() => undefined);
   }, [jobId, token]);
+
+  // An estimate saved after this panel opened (for example after approving first).
+  useEffect(() => {
+    function onSaved(event: Event) {
+      const record = (event as CustomEvent<GenerationMaterialEstimate>).detail;
+      if (record?.generation_job_id === jobId) applyEstimate(record);
+    }
+    window.addEventListener("groundsops:estimate-saved", onSaved);
+    return () => window.removeEventListener("groundsops:estimate-saved", onSaved);
+  }, [jobId]);
+
+  function applyEstimate(record: GenerationMaterialEstimate) {
+    setEstimate(record);
+    setItems([
+      { description: `${record.material_type.charAt(0).toUpperCase()}${record.material_type.slice(1)} materials`, category: "material", quantity: record.order_quantity, unit: record.material_unit, unit_price: record.unit_price },
+      { description: "Installation labour", category: "labour", quantity: record.labour_hours, unit: "hour", unit_price: record.labour_rate },
+      ...(Number(record.delivery_cost) > 0 ? [{ description: "Delivery", category: "delivery" as const, quantity: "1", unit: "delivery", unit_price: record.delivery_cost }] : []),
+    ]);
+    setTax(record.tax_rate);
+  }
 
   const preview = useMemo(() => {
     const subtotal = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0);

@@ -160,6 +160,8 @@ export function MaterialEstimator({
       );
       setEstimate(row);
       setLabourHours(row.labour_hours);
+      // Let the quote builder for this concept pick up the new estimate.
+      window.dispatchEvent(new CustomEvent("groundsops:estimate-saved", { detail: row }));
       onMessage("Material and labour estimate saved.");
     } catch (error) {
       onMessage(error instanceof Error ? error.message : "Estimate could not be calculated.");
