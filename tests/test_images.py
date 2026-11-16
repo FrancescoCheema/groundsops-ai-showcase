@@ -29,3 +29,23 @@ def test_small_photos_are_enlarged_for_inpainting_with_matching_mask():
         "image/jpeg",
         large_mask,
     )
+
+
+def test_inpainting_mask_is_grown_and_bad_input_passes_through():
+    from io import BytesIO
+
+    from PIL import Image, ImageDraw
+
+    from groundsops.images import expand_mask_for_inpainting
+
+    mask = Image.new("L", (400, 300), 0)
+    ImageDraw.Draw(mask).rectangle((100, 100, 199, 199), fill=255)
+    stream = BytesIO()
+    mask.save(stream, format="PNG")
+    grown = Image.open(BytesIO(expand_mask_for_inpainting(stream.getvalue()))).convert("L")
+
+    margin = round(300 * 0.06)
+    assert grown.getpixel((100 - margin, 150)) == 255
+    assert grown.getpixel((100 - margin - 2, 150)) == 0
+    assert grown.getpixel((150, 150)) == 255
+    assert expand_mask_for_inpainting(b"not an image") == b"not an image"

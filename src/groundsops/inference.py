@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 from groundsops.config import get_settings
+from groundsops.coverage import lawn_refinement_masks
 from groundsops.db import SessionLocal
 from groundsops.evaluation import evaluate_generation
 from groundsops.images import composite_edit
@@ -11,6 +12,7 @@ from groundsops.inference_providers import (
     ImageGenerationResult,
     get_image_generation_provider,
 )
+from groundsops.material_intent import resolve_material_intent
 from groundsops.models import GenerationEvaluation, GenerationJob, GenerationStatus, SiteCapture
 from groundsops.storage import get_object_storage, tenant_storage_key
 
@@ -21,6 +23,7 @@ def _run_provider(
     image_override: bytes | None = None,
     image_media_type_override: str | None = None,
     prompt_override: str | None = None,
+    mask_override: bytes | None = None,
 ) -> ImageGenerationResult:
     storage = get_object_storage()
     with SessionLocal() as db:
@@ -36,7 +39,7 @@ def _run_provider(
         ImageGenerationRequest(
             image=image,
             image_media_type=image_media_type,
-            mask=storage.get(job.mask_storage_key),
+            mask=mask_override or storage.get(job.mask_storage_key),
             prompt=prompt_override or job.prompt,
         )
     )
@@ -96,6 +99,8 @@ def process_generation_job(job_id: str) -> None:
             provider_result = None
 
             mask_image = storage.get(job.mask_storage_key)
+            intent = resolve_material_intent(job.prompt)
+            lawn_requested = intent is not None and intent.key == "grass"
             for attempt in range(1, settings.inference_max_attempts + 1):
                 provider_result = _run_provider(
                     job,
@@ -111,6 +116,27 @@ def process_generation_job(job_id: str) -> None:
                     image=composite_edit(source_image, provider_result.image, mask_image),
                     media_type="image/png",
                 )
+                # A lawn painted as an island leaves bare ground inside the selection:
+                # repaint just those parts, now surrounded by the new lawn.
+                if lawn_requested:
+                    refinement = lawn_refinement_masks(provider_result.image, mask_image)
+                    if refinement:
+                        model_mask, composite_mask, _share = refinement
+                        second = _run_provider(
+                            job,
+                            image_override=provider_result.image,
+                            image_media_type_override="image/png",
+                            prompt_override=retry_prompt,
+                            mask_override=model_mask,
+                        )
+                        total_latency_ms += second.latency_ms
+                        total_cost += second.estimated_cost_usd
+                        provider_result = replace(
+                            provider_result,
+                            image=composite_edit(
+                                provider_result.image, second.image, composite_mask
+                            ),
+                        )
                 evaluation = evaluate_generation(
                     source_image,
                     provider_result.image,

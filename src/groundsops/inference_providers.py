@@ -11,7 +11,7 @@ import httpx
 from PIL import Image
 
 from groundsops.config import Settings, get_settings
-from groundsops.images import upscale_for_inpainting
+from groundsops.images import expand_mask_for_inpainting, upscale_for_inpainting
 from groundsops.material_intent import resolve_material_intent
 
 
@@ -101,6 +101,7 @@ class ReplicateImageGenerationProvider:
         image, media_type, mask = upscale_for_inpainting(
             request.image, request.image_media_type, request.mask
         )
+        mask = expand_mask_for_inpainting(mask)
         model_input = {
             "image": _data_uri(image, media_type),
             "mask": _data_uri(mask, "image/png"),

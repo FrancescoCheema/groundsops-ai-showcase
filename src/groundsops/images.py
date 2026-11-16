@@ -149,3 +149,30 @@ def upscale_for_inpainting(
     original.resize(size, Image.Resampling.LANCZOS).save(image_out, format="PNG")
     enlarged_mask.save(mask_out, format="PNG")
     return image_out.getvalue(), "image/png", mask_out.getvalue()
+
+
+def expand_mask_for_inpainting(mask: bytes, fraction: float = 0.06) -> bytes:
+    """Grow the selection the model is asked to repaint by a margin on every side.
+
+    Inpainting models blend the edge of a fill into its surroundings, so asked to put
+    lawn on bare soil they paint a band of soil just inside the selection. With a wider
+    selection that band lands outside the user's area, and compositing keeps only the
+    user's original selection, which is then filled edge to edge.
+    """
+    try:
+        with Image.open(BytesIO(mask)) as source:
+            grey = source.convert("L")
+    except (UnidentifiedImageError, OSError):
+        return mask
+    radius = max(2, round(min(grey.size) * fraction))
+    binary = grey.point(lambda value: 255 if value >= 128 else 0)
+    # MaxFilter needs an odd size; grow in steps to keep it fast on large masks.
+    grown = binary
+    remaining = radius
+    while remaining > 0:
+        step = min(remaining, 7)
+        grown = grown.filter(ImageFilter.MaxFilter(step * 2 + 1))
+        remaining -= step
+    out = BytesIO()
+    grown.save(out, format="PNG")
+    return out.getvalue()
