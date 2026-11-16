@@ -93,7 +93,7 @@ Material (including waste), labour, delivery and tax come from each company's ow
 | Frontend | Next.js, React, TypeScript, responsive CSS, Canvas APIs |
 | Backend | FastAPI, Pydantic, SQLAlchemy, Alembic, Python 3.12 |
 | Data | PostgreSQL, private S3 object storage, encrypted backups |
-| AI | Replicate provider interface, FLUX Fill Pro, deterministic mock provider |
+| AI | Hosted image-inpainting model behind a provider interface, automated quality evaluation, deterministic mock provider |
 | Identity | Amazon Cognito, OIDC/JWT, tenant RBAC, optional TOTP MFA |
 | Billing | Stripe Checkout, customer portal, signed webhooks, trial and read-only lockout |
 | Delivery | Terraform, Docker, Docker Compose, Caddy, GitHub Actions, AWS Lightsail, Route 53 |

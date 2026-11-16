@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     inference_provider: str = "disabled"
     replicate_api_token: str | None = None
     replicate_model_version: str | None = None
-    # Prompt adherence for FLUX Fill (1.5-100). Replicate's default is 60; low values
+    # Prompt adherence for the inpainting model (1.5-100). Default 60; low values
     # let the model ignore the requested material and continue the surrounding scene.
     replicate_guidance: float = Field(default=60.0, ge=1.5, le=100)
     inference_timeout_seconds: int = 180

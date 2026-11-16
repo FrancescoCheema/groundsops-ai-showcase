@@ -1,8 +1,9 @@
 from datetime import datetime
 from decimal import Decimal
+from hashlib import sha256
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from groundsops.models import (
     CaptureStatus,
@@ -14,6 +15,22 @@ from groundsops.models import (
     TimesheetStatus,
     WorkOrderStatus,
 )
+
+
+def public_model_label(model_version: str) -> str:
+    """Name a generation model without revealing the vendor or model behind it.
+
+    Different versions keep distinct labels (a short fingerprint), so quality can still
+    be compared across releases on the AI quality page.
+    """
+    if model_version.startswith("mock"):
+        return "Sample generator"
+    return f"Concept model {sha256(model_version.encode()).hexdigest()[:6]}"
+
+
+def public_provider_label(provider: str) -> str:
+    return "sample" if provider == "mock" else "hosted"
+
 
 
 class OrganizationCreate(BaseModel):
@@ -610,6 +627,16 @@ class GenerationJobRead(BaseModel):
     started_at: datetime | None
     completed_at: datetime | None
 
+    @field_validator("model_version", mode="after")
+    @classmethod
+    def _public_model(cls, value: str) -> str:
+        return public_model_label(value)
+
+    @field_validator("provider", mode="after")
+    @classmethod
+    def _public_provider(cls, value: str) -> str:
+        return public_provider_label(value)
+
 
 class GenerationMaterialEstimateCreate(BaseModel):
     material_type: Literal["sod", "pavers", "mulch", "gravel", "topsoil"]
@@ -700,6 +727,11 @@ class GenerationModelMetric(BaseModel):
     average_latency_ms: float | None
     estimated_cost_usd: Decimal
 
+    @field_validator("model_version", mode="after")
+    @classmethod
+    def _public_model(cls, value: str) -> str:
+        return public_model_label(value)
+
 
 class GenerationTrendMetric(BaseModel):
     date: str
@@ -721,6 +753,11 @@ class GenerationReviewItem(BaseModel):
     protected_change_ratio: Decimal
     failure_reasons: list[str]
     latest_review_decision: str | None = None
+
+    @field_validator("model_version", mode="after")
+    @classmethod
+    def _public_model(cls, value: str) -> str:
+        return public_model_label(value)
 
 
 class GenerationMetricsRead(BaseModel):

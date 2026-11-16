@@ -122,3 +122,25 @@ def test_completed_human_review_removes_failed_job_from_queue(client, create_ide
     assert metrics.status_code == 200
     assert metrics.json()["failed_evaluations"] == 1
     assert metrics.json()["review_queue"] == []
+
+
+def test_model_identity_is_never_exposed(client, create_identity):
+    organization_id, headers = create_identity("Private Model Landscaping")
+    _seed_evaluated_job(client, organization_id, headers, passed=False)
+
+    response = client.get("/api/v1/generation-metrics", headers=headers)
+    assert response.status_code == 200
+    assert "landscape-model-v1" not in response.text
+    assert "replicate" not in response.text.lower()
+    labels = {model["model_version"] for model in response.json()["models"]}
+    assert len(labels) == 1 and next(iter(labels)).startswith("Concept model ")
+
+
+def test_public_model_labels():
+    from groundsops.schemas import public_model_label, public_provider_label
+
+    assert public_model_label("mock-landscape-v1") == "Sample generator"
+    assert public_model_label("owner/model-a") != public_model_label("owner/model-b")
+    assert "owner" not in public_model_label("owner/model-a")
+    assert public_provider_label("replicate") == "hosted"
+    assert public_provider_label("mock") == "sample"

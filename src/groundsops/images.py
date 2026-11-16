@@ -78,7 +78,7 @@ def normalize_edit_mask(
         raise InvalidImage("Mask dimensions are not allowed")
 
     # Canvas exports can contain antialiasing and alpha. Thresholding removes both
-    # ambiguities and gives FLUX Fill the exact contract it documents: black pixels
+    # ambiguities and gives the inpainting model the contract it expects: black pixels
     # are protected and white pixels are editable.
     normalized = mask.point(lambda value: 255 if value >= 128 else 0, mode="1").convert("L")
     histogram = normalized.histogram()
@@ -127,7 +127,7 @@ def upscale_for_inpainting(
 ) -> tuple[bytes, str, bytes]:
     """Enlarge small photos (and their mask) before inpainting.
 
-    FLUX Fill works at about one megapixel. Given a small photo, such as one saved from a
+    The inpainting model works at about one megapixel. Given a small photo, such as one saved from a
     Google Business listing, it paints textures far too large for the scene (fist-sized
     gravel, clumped grass). The result is scaled back down when composited.
     Returns ``(image, media_type, mask)``; images already large enough are unchanged.

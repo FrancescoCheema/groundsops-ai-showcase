@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-labelledby="title desc">
   <title id="title">GroundsOps AI production architecture</title>
-  <desc id="desc">Users reach a Next.js web application served by Caddy. It calls a FastAPI service authenticated by Amazon Cognito. The API stores data in PostgreSQL and private files in S3, edits images through Replicate FLUX Fill Pro, and bills through Stripe. GitHub Actions, Terraform, Docker Compose, security scanning, systemd monitors, AWS alarms and verified backups operate the system.</desc>
+  <desc id="desc">Users reach a Next.js web application served by Caddy. It calls a FastAPI service authenticated by Amazon Cognito. The API stores data in PostgreSQL and private files in S3, edits images through a hosted AI image model, and bills through Stripe. GitHub Actions, Terraform, Docker Compose, security scanning, systemd monitors, AWS alarms and verified backups operate the system.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#07140e"/><stop offset="1" stop-color="#123d2a"/></linearGradient>
     <filter id="shadow"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-opacity=".25"/></filter>
@@ -61,7 +61,7 @@
   <text x="530" y="606" class="small">Short-lived signed URLs</text>
   <rect x="720" y="470" width="280" height="170" rx="18" class="box"/>
   <text x="860" y="514" class="head">AI image provider</text>
-  <text x="860" y="550" class="body">Replicate · FLUX Fill Pro</text>
+  <text x="860" y="550" class="body">Hosted inpainting model</text>
   <text x="860" y="578" class="body">Masked edits, composited</text>
   <text x="860" y="606" class="small">Quality gates · cost tracking</text>
   <rect x="1050" y="470" width="280" height="170" rx="18" class="box"/>

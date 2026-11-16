@@ -46,9 +46,9 @@ SCENE_MATCHING = (
 
 
 def landscaping_edit_prompt(user_prompt: str) -> str:
-    """Describe the finished surface for FLUX Fill.
+    """Describe the finished surface for the inpainting model.
 
-    FLUX Fill only regenerates the masked pixels, so the prompt should describe what
+    The model only regenerates the masked pixels, so the prompt should describe what
     belongs there, not give instructions about masks or list unwanted content.
     """
     request = " ".join(user_prompt.split()).strip().rstrip(".")

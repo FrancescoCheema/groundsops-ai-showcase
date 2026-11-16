@@ -90,7 +90,7 @@ def test_replicate_official_model_uses_model_endpoint_and_fixed_cost():
         calls.append(request)
         if request.method == "POST":
             assert request.url.path == (
-                "/v1/models/black-forest-labs/flux-fill-pro/predictions"
+                "/v1/models/example-owner/inpainting-model/predictions"
             )
             payload = json.loads(request.content)
             assert "version" not in payload
@@ -116,7 +116,7 @@ def test_replicate_official_model_uses_model_endpoint_and_fixed_cost():
     settings = Settings(
         inference_provider="replicate",
         replicate_api_token="test-token",
-        replicate_model_version="black-forest-labs/flux-fill-pro",
+        replicate_model_version="example-owner/inpainting-model",
         replicate_cost_per_output_usd=0.05,
     )
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
@@ -170,7 +170,7 @@ def _rate_limit_provider(client: httpx.Client, sleeps: list[float]):
     settings = Settings(
         inference_provider="replicate",
         replicate_api_token="test-token",
-        replicate_model_version="black-forest-labs/flux-fill-pro",
+        replicate_model_version="example-owner/inpainting-model",
     )
     return ReplicateImageGenerationProvider(settings, client=client, sleep=sleeps.append)
 

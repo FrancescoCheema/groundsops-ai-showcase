@@ -8,7 +8,7 @@ class MaterialIntent:
     instruction: str
 
 
-# Descriptions are deliberately positive. Diffusion models such as FLUX have no
+# Descriptions are deliberately positive. Diffusion inpainting models have no
 # negative prompt, so naming unwanted materials ("no gravel, no pavers") pushes the
 # output towards them.
 _INTENTS = (
