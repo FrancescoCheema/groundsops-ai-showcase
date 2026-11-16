@@ -79,6 +79,8 @@ export function MaskEditor({ captureId, token, onChange, onMeasurement, onError 
     setHardEdgeShare(0);
     onChange(undefined);
     onMeasurement?.(undefined);
+    // No photo chosen yet (the design's photos are still loading, or it has none).
+    if (!captureId) return () => { active = false; };
     captureBlob(captureId, token)
       .then((blob) => {
         objectUrl = URL.createObjectURL(blob);
@@ -407,7 +409,7 @@ export function MaskEditor({ captureId, token, onChange, onMeasurement, onError 
           <canvas ref={overlayRef} onPointerDown={begin} onPointerMove={stroke} onPointerUp={finish} onPointerCancel={finish} />
           <canvas className="calibration-canvas" ref={calibrationRef} onPointerDown={begin} onPointerMove={stroke} onPointerUp={finish} onPointerCancel={finish} style={{ pointerEvents: scaleMode ? "auto" : "none" }} />
           <canvas ref={maskRef} hidden />
-        </div> : <span>Loading source photo…</span>}
+        </div> : <span>{captureId ? "Loading source photo…" : "Add a site photo above to start."}</span>}
       </div>
       <p className={hasSelection ? "mask-ready" : "mask-required"}>{hasSelection ? "Editable area selected." : "Paint at least one area before generating."}</p>
       {hardEdgeWarning && <div className="mask-warning" role="status">
