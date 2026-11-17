@@ -1,22 +1,32 @@
 name: Dependabot auto-merge
 
+# Patch and minor updates merge on their own once "Quality and security" passes.
+# Major updates are labelled, assigned to the repository owner (which sends a
+# notification) and wait for a manual review.
+#
+# This merges from the workflow instead of using GitHub's auto-merge, which needs
+# branch protection (not available for private repositories on the free plan).
+
 on:
   pull_request_target:
-    types: [opened, reopened, synchronize, ready_for_review]
+    types: [opened, reopened, synchronize]
+  workflow_run:
+    workflows: ["Quality and security"]
+    types: [completed]
 
 permissions:
   contents: write
   pull-requests: write
+  actions: write
 
 concurrency:
-  group: dependabot-automerge-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: dependabot-automerge-${{ github.event.pull_request.number || github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
 
 jobs:
-  enable-auto-merge:
-    if: >-
-      github.actor == 'dependabot[bot]' &&
-      github.event.pull_request.draft == false
+  triage:
+    # Sort a new Dependabot PR. Never checks out or runs the PR's code.
+    if: github.event_name == 'pull_request_target' && github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Read Dependabot update metadata
@@ -25,11 +35,83 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Enable squash auto-merge for compatible updates
-        if: >-
-          steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
-          steps.metadata.outputs.update-type == 'version-update:semver-minor'
+      - name: Mark small updates for automatic merge
+        if: steps.metadata.outputs.update-type != 'version-update:semver-major'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
-        run: gh pr merge --auto --squash "$PR_URL"
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh label create automerge --repo "$REPO" --color 0e8a16 \
+            --description "Small dependency update: merges itself when checks pass" --force
+          gh pr edit "$PR" --repo "$REPO" --add-label automerge
+
+      - name: Flag major updates for manual review
+        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          DEPENDENCIES: ${{ steps.metadata.outputs.dependency-names }}
+          FROM: ${{ steps.metadata.outputs.previous-version }}
+          TO: ${{ steps.metadata.outputs.new-version }}
+        run: |
+          gh label create major-update --repo "$REPO" --color d93f0b \
+            --description "Major dependency update: review and merge by hand" --force
+          gh pr edit "$PR" --repo "$REPO" --add-label major-update --add-assignee "$OWNER"
+          if [ -z "$(gh pr view "$PR" --repo "$REPO" --json comments \
+              --jq '.comments[] | select(.body | contains("<!-- major-update -->"))')" ]; then
+            gh pr comment "$PR" --repo "$REPO" --body "<!-- major-update -->
+          **Major update: not merged automatically.** ${DEPENDENCIES} ${FROM:+$FROM → }${TO}
+
+          Before merging:
+          1. Read the release notes for breaking changes.
+          2. Check that **Quality and security** passed on this PR.
+          3. Merge, then confirm the staging deploy and smoke test pass."
+          fi
+
+  merge:
+    # Merge a small update once its checks have passed on the PR.
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'dependabot/') &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge if labelled automerge and up to date
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          pr=$(gh pr list --repo "$REPO" --head "$BRANCH" --state open \
+            --json number,labels,headRefOid,author,isCrossRepository \
+            --jq '.[] | select(.author.login == "app/dependabot" and (.isCrossRepository | not)
+                    and any(.labels[]; .name == "automerge")) | "\(.number) \(.headRefOid)"')
+          if [ -z "$pr" ]; then
+            echo "No open automerge PR for $BRANCH."
+            exit 0
+          fi
+          read -r number head <<<"$pr"
+          if [ "$head" != "$TESTED_SHA" ]; then
+            echo "PR #$number changed after this run was tested; waiting for the next run."
+            exit 0
+          fi
+          gh pr merge "$number" --repo "$REPO" --squash --delete-branch --match-head-commit "$TESTED_SHA"
+          echo "MERGED=1" >> "$GITHUB_ENV"
+
+      - name: Deploy the merged update to staging
+        # Merges made with GITHUB_TOKEN do not start push workflows, so start it here.
+        if: env.MERGED == '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          # The public showcase has no deploy workflow; nothing to do there.
+          if gh workflow view deploy-staging.yml --repo "$REPO" >/dev/null 2>&1; then
+            gh workflow run deploy-staging.yml --repo "$REPO" --ref main
+          fi
